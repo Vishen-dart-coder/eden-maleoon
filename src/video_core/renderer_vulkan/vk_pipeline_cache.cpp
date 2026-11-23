@@ -495,6 +495,39 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         .single_lane_geometry_subgroups = !profile.SupportsSubgroupStage(Shader::Stage::Geometry),
         .support_attribute_texture_handle = true,
     };
+    if (device.IsHuawei()) {
+        // Huawei's Bisheng shader compiler crashes on several optional SPIR-V features.
+        // Restrict shaders to a conservative baseline.
+        LOG_WARNING(Render_Vulkan, "Huawei Maleoon: using conservative shader profile");
+        profile.supported_spirv = (std::min)(profile.supported_spirv, 0x00010300u);
+        profile.support_int8 = false;
+        profile.support_uniform_and_storage_buffer_8bit = false;
+        profile.support_storage_buffer_8bit = false;
+        profile.support_int16 = false;
+        profile.support_uniform_and_storage_buffer_16bit = false;
+        profile.support_storage_buffer_16bit = false;
+        profile.support_int64 = false;
+        profile.support_int64_atomics = false;
+        profile.support_shared_int64_atomics = false;
+        profile.support_float_controls = false;
+        profile.support_explicit_workgroup_layout = false;
+        profile.support_workgroup_layout_8bit_access = false;
+        profile.support_workgroup_layout_16bit_access = false;
+        profile.support_shader_quad_control = false;
+        profile.support_quad_shuffles = false;
+        profile.support_vote = false;
+        profile.support_shuffle_relative = false;
+        profile.supported_subgroup_stages = 0;
+        profile.support_typeless_image_loads = false;
+        profile.support_sampled_image_array_nonuniform_indexing = false;
+        profile.support_storage_image_array_nonuniform_indexing = false;
+        profile.support_uniform_texel_buffer_array_nonuniform_indexing = false;
+        profile.support_storage_texel_buffer_array_nonuniform_indexing = false;
+        host_info.support_float16 = false;
+        host_info.support_float64 = false;
+        host_info.support_int64 = false;
+        host_info.single_lane_geometry_subgroups = true;
+    }
     host_info.ApplyDescriptorLimitPolicy();
 
     if (device.GetMaxVertexInputAttributes() < Maxwell::NumVertexAttributes) {
