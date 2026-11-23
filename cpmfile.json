@@ -1,0 +1,402 @@
+{
+    "biscuit": {
+        "hash": "1229f345b014f7ca544dedb4edb3311e41ba736f9aa9a67f88b5f26f3c983288c6bb6cdedcfb0b8a02c63088a37e6a0d7ba97d9c2a4d721b213916327cffe28a",
+        "min_version": "0.9.1",
+        "repo": "lioncash/biscuit",
+        "version": "v0.19.0"
+    },
+    "boost": {
+        "artifact": "boost-%VERSION%.tar.zst",
+        "find_args": "CONFIG OPTIONAL_COMPONENTS headers context system fiber filesystem process",
+        "hash": "681d97be4386767662e230b2e7c9754d45e709cc5db4e747c23c27d1f5b0e87770bdf19b0bc44dcb0e8349324887bbb8fffb432098f4d0ce74a5043021a90afc",
+        "min_version": "1.87",
+        "package": "Boost",
+        "repo": "eden-emulator/ext-boost",
+        "version": "1.92.0"
+    },
+    "boost_headers": {
+        "bundled": true,
+        "hash": "c5fa2cd72f6e6666b7963b97bc359c75284b8fb540c30f3629a028b85270c9bc66c8a051383964f2bd4c1e005a4691593d15696e7ef39ea87cf6cff9e5691fb2",
+        "repo": "boostorg/headers",
+        "version": "boost-1.91.0"
+    },
+    "catch2": {
+        "hash": "7eea385d79d88a5690cde131fe7ccda97d5c54ea09d6f515000d7bf07c828809d61c1ac99912c1ee507cf933f61c1c47ecdcc45df7850ffa82714034b0fccf35",
+        "min_version": "3.0.1",
+        "package": "Catch2",
+        "patches": [
+            "0001-solaris-isnan-fix.patch"
+        ],
+        "repo": "catchorg/Catch2",
+        "version": "v3.13.0"
+    },
+    "cubeb": {
+        "find_args": "CONFIG",
+        "hash": "8a4bcb2f83ba590f52c66626e895304a73eb61928dbc57777e1822e55378e3568366f17f9da4b80036cc2ef4ea9723c32abf6e7d9bbe00fb03654f0991596ab0",
+        "options": [
+            "USE_SANITIZERS OFF",
+            "BUILD_TESTS OFF",
+            "BUILD_TOOLS OFF",
+            "BUNDLE_SPEEX ON"
+        ],
+        "repo": "mozilla/cubeb",
+        "version": "fa02160712"
+    },
+    "discord-rpc": {
+        "find_args": "MODULE",
+        "hash": "8d680b3a16d6f6bf292ad823cf8635595ff986f2a49f758e3009f505b540a9d75194a8cf44cddea75736a8c3e3b5160166e716a0939ce3f18cc463cf648753fe",
+        "package": "DiscordRPC",
+        "repo": "eden-emulator/discord-rpc",
+        "version": "76616d8675"
+    },
+    "enet": {
+        "find_args": "MODULE",
+        "hash": "a0d2fa8c957704dd49e00a726284ac5ca034b50b00d2b20a94fa1bbfbb80841467834bfdc84aa0ed0d6aab894608fd6c86c3b94eee46343f0e6d9c22e391dbf9",
+        "min_version": "1.3",
+        "repo": "lsalzman/enet",
+        "version": "v1.3.18"
+    },
+    "ffmpeg": {
+        "hash": "ed177621176b3961bdcaa339187d3a7688c1c8b060b79c4bb0257cbc67ad7021ae5d5adca5303b45625abbbe3d9aafdd87ce777b8690ac295290d744c875489a",
+        "repo": "FFmpeg/FFmpeg",
+        "version": "c7b5f1537d"
+    },
+    "ffmpeg-ci": {
+        "ci": true,
+        "hashes": {
+            "android-aarch64": "2f0f37c84b96a479db4c401cdfcf13740a647d06aa12a55aeedf715fc7ce10fb6d9b3a572a0e62db06560889d6db8e04b79ef3722c42764d6131d10debbc790e",
+            "android-amd64": "4e31d9c58b0e7a03c0a0f8675e5ec18a88e272042b046348fd7ead05dccf5595101827ba71cb508aef126689a976236d99baaf74e9d030fdea50acc827a96ef9",
+            "ios-aarch64": "18160ea989f5f4f8c29b00ea7e867abd99c2d053dc4f036439757b0d8692cf7b3d09fac95d33c84ed5c82269cb185d7ef8f61e4044f609abd5a445f73a4b3e5d",
+            "linux-aarch64": "c8e0e9db4e357baf6408c484eca67f9dee272e158e0d15356b16be0d1e7ada51d3290461636eab4965c556c990ce831dc4300ca622fd16f74d8cc587a1962d05",
+            "linux-amd64": "e3de965f3ab2394989d2ce74a3dacacdc76275e6c55e9af524d69b8eebfbee179659bc1641841f1fe0a4a1cfb554e8ce1a1d948f0a0330e5fe4147b4657b8bf9",
+            "macos-aarch64": "ef20086e9257739ad42051569e4ffc90c8fe74f8baee188a63a1c079fa3a1bf5dbad70a2aa12f836ec21ebcff5a51e2af3be4978b8f71c251a2ac289ef628187",
+            "mingw-aarch64": "9e96950030bf629637773106a0ecb5e400fe5082775d32667a7583317e840177add55d18e4984e02aa9fd855421af96e4ed6e6156e35cdcce34d7c0e86081c08",
+            "mingw-amd64": "b3e390548496d7c38a749eca3d94bafc3361cab3ecdbf389f437079d692496caddecfd7c7df46100023d2c9dbef33b85bb725136413aaf1cfa89a4aa97ace39f",
+            "windows-aarch64": "c9578511647e2874abdfcb6a9398572a0afd362ac5012be42a8f822be58fb18abcc551333783c5a7cdd5696e25def5e6db3e0419f9c381a7f87760e9d9e73ad9",
+            "windows-amd64": "9f060058a406eafd439f79c8f142aae96d3e10ba0856eb8cfe4a8a2e4292444e6b3b2d06edfe7fab0d23a017b9c1fb83fa89954dc2a84e5844d8f53742471758"
+        },
+        "name": "ffmpeg",
+        "package": "FFmpeg",
+        "repo": "crueter-ci/FFmpeg",
+        "version": "9.0.2-1790726865-946fcce07b"
+    },
+    "frozen": {
+        "hash": "b8dfe741c82bc178dfc9749d4ab5a130cee718d9ee7b71d9b547cf5f7f23027ed0152ad250012a8546399fcc1e12187efc68d89d6731256c4d2df7d04eef8d5c",
+        "package": "frozen",
+        "repo": "serge-sans-paille/frozen",
+        "version": "61dce5ae18"
+    },
+    "gamemode": {
+        "find_args": "MODULE",
+        "hash": "e87ec14ed3e826d578ebf095c41580069dda603792ba91efa84f45f4571a28f4d91889675055fd6f042d7dc25b0b9443daf70963ae463e38b11bcba95f4c65a9",
+        "min_version": "1.7",
+        "repo": "FeralInteractive/gamemode",
+        "version": "ce6fe122f3"
+    },
+    "hydrocarbon": {
+        "hash": "e08520daa8acc6dcb3c181b1311f3386858907965eca1df5ff70b9f2b729bdacec3b54e5c852e89864d3e5dde6f83eb2b14e8f601b11d6b21963386e0a051d93",
+        "min_version": "0.1.1",
+        "repo": "crueter/hydrocarbon",
+        "version": "f4ec2a3754"
+    },
+    "jacinth": {
+        "hash": "bba5f830724013b334043b0fc783ced7e478c8d2691d2ee6dafc92ce5df4866b2d656a1ee5ffe3e4b75d11e4ae3a4dc86b7578f9a73c438909fd54775540e6af",
+        "repo": "crueter/jacinth",
+        "version": "0.1.0"
+    },
+    "lagoon": {
+        "hash": "b9380f99c6effaeccc6d8f81d4942e852c11ad28613df637e155451556ae5826f93765bee57a5c87a9740d2bd1db463ad0f55a947772fe9d57eeabae3efa373e",
+        "repo": "loongson-community/lagoon",
+        "version": "1.0.0"
+    },
+    "libadrenotools": {
+        "hash": "191b8dad7ec39c4431ee155ca74ffb51d9c9b085e6f44d631bc03a34b09894dff6b7e1dd153b6eaac95647662b851ccc5ebb7ef54e6f57a6ee114a9516cf7282",
+        "patches": [
+            "0001-use-cpmfile-def-for-linkernsbypass.patch"
+        ],
+        "repo": "eden-emulator/libadrenotools",
+        "version": "6727fe4218"
+    },
+    "libusb": {
+        "find_args": "MODULE",
+        "hash": "98c5f7940ff06b25c9aa65aa98e23de4c79a4c1067595f4c73cc145af23a1c286639e1ba11185cd91bab702081f307b973f08a4c9746576dc8d01b3620a3aeb5",
+        "patches": [
+            "0001-netbsd-gettime.patch"
+        ],
+        "repo": "libusb/libusb",
+        "version": "v1.0.29"
+    },
+    "linkernsbypass": {
+        "bundled": "true",
+        "hash": "bbe3f1f08e2bc7172b36e8f052912cc374289fc9a8e5a39ae7547a0c232de8f57ba24883451896b7a9a5d1be0e4de5c5b0f70c2022eda18d7d5a754847521800",
+        "repo": "bylaws/liblinkernsbypass",
+        "version": "aa3975893d"
+    },
+    "llvm-mingw": {
+        "artifact": "clang-rt-builtins.tar.zst",
+        "git_host": "git.eden-emu.dev",
+        "hash": "d902392caf94e84f223766e2cc51ca5fab6cae36ab8dc6ef9ef6a683ab1c483bfcfe291ef0bd38ab16a4ecc4078344fa8af72da2f225ab4c378dee23f6186181",
+        "repo": "eden-emu/llvm-mingw",
+        "version": "20250828"
+    },
+    "lz4": {
+        "hash": "5638a9ca76f333bea718b457588eadafd8dddbc4c8afcd8e21992805afff7af283283642558e52d1f1d4655dbe26f2aa85fa89dc365041ca621baf79c552f364",
+        "name": "lz4",
+        "repo": "lz4/lz4",
+        "source_subdir": "build/cmake",
+        "version": "v1.11.0"
+    },
+    "moltenvk": {
+        "artifact": "MoltenVK-macOS.tar",
+        "bundled": true,
+        "hash": "5695b36ca5775819a71791557fcb40a4a5ee4495be6b8442e0b666d0c436bec02aae68cc6210183f7a5c986bdbec0e117aecfad5396e496e9c2fd5c89133a347",
+        "repo": "V380-Ori/Ryujinx.MoltenVK",
+        "version": "v1.4.1-ryujinx"
+    },
+    "oaknut": {
+        "hash": "9697e80a7d5d9bcb3ce51051a9a24962fb90ca79d215f1f03ae6b58da8ba13a63b5dda1b4dde3d26ac6445029696b8ef2883f4e5a777b342bba01283ed293856",
+        "min_version": "2.0.1",
+        "repo": "eden-emulator/oaknut",
+        "version": "v2.0.3"
+    },
+    "openssl": {
+        "hash": "29002ce50cb95a4f4f1d0e9d3f684401fbd4eac34203dc2eef3b6334af5d44aa46bf788b63a6f5c139c383eafb7269ae87a58a9a3ad5912903b9773e545ccc0a",
+        "min_version": "3.0.0",
+        "package": "OpenSSL",
+        "patches": [
+            "0001-add-bundled-cert.patch"
+        ],
+        "repo": "openssl/openssl",
+        "version": "openssl-3.6.2"
+    },
+    "openssl-ci": {
+        "ci": true,
+        "hashes": {
+            "android-aarch64": "7b35c505c7e57c2bb792ff191ed3f1412b1b0575e1ce278681d48678b8cf8c17d8fee0fc276c074e5a141adc5bafd7a54073f223d8aff40d3e0f938a76363b5e",
+            "android-amd64": "1dcb151c4387c72bb15fd971c0fc717b3ba59d50554200a0902d90ed5fa0f8e0f93b4c2b241e08c20587853b6dbc0638dbe420019928f08ed09ab05acc62d8d9",
+            "ios-aarch64": "f6a16d72af48de31ce244a54628ba6c2503685f8cf78f6cfd765f51f8cc83334899f9da9b0f5983ac5b6ed92766c0f3aba47e7fc43f8fefd811f173a974cd344",
+            "linux-aarch64": "24146f12981fd1fd425f70b53a9438565ac47fb52714b03a95e0503e99890b63471a00bd717c832ff2a0ba41b76ce6575e2602d59004031b88ec5f3cc325289b",
+            "linux-amd64": "309572b02281c769dc0d8953e7b3768b23fb897d7565dd3c9a2e72615c8f2c7cde5f88265cff5754de45cda3098e318cde0c2c0336b206933825475450de7297",
+            "macos-aarch64": "b91d61cf356625b2a983aa1e116b7701b34bd594a76ff74f19819df0bf10c17c68dd136604d7bc607b63b5aca0555f0b6d8b0576643442195e99abaa912da9e5",
+            "mingw-aarch64": "5577796354e0c94a8d2bef2b2c8dd1be6a7a8cf1a88a3bd9d1795899b9a600c5dd68d474d93b3d6f7b1999e53ef6f4ad359e41670828224695e240a42b268b88",
+            "mingw-amd64": "b88330d64e041c0d8695d746668056114012ed727f29895d03771b887ca7c7bdc71f25db29b970d24a070304826194efa7a8901ab56a97355f62a4196b25a322",
+            "windows-aarch64": "2494a15f629f374619b35edad2366df2a574a21a5773b74e5c46974e17a586b2120ef4f761c81413882437cad5ff6796efb09237638104cbd92e392926631492",
+            "windows-amd64": "5467341b43af681606e5d82414a033d3c1531ad94f5e80d37869b23155ab7679c35b522f2ebc2bdc4125e282f9def654045918e30f225f60f739fae84eb5104c"
+        },
+        "name": "openssl",
+        "package": "OpenSSL",
+        "repo": "crueter-ci/OpenSSL",
+        "version": "4.0.1-1789774337-b64f68a94e"
+    },
+    "openssl-cmake": {
+        "bundled": true,
+        "hash": "2cc185c924fd70e7d886257ca0caa42b3b8f7f712f2052b4f94dde74759e27022de76178460e18c9bdfc57c366583999e198fbb6052d4e7d91c099d15a0ca63e",
+        "options": [
+            "OPENSSL_CONFIGURE_OPTIONS threads"
+        ],
+        "patches": [
+            "0001-cpmutil-compat.patch",
+            "0002-use-ccache.patch",
+            "0003-use-cmake-compiler-flags.patch",
+            "0004-use-shell-wrapper.patch",
+            "0005-cross-compile.patch"
+        ],
+        "repo": "jimmy-park/openssl-cmake",
+        "version": "3.6.2"
+    },
+    "opus": {
+        "find_args": "MODULE",
+        "hash": "9506147b0de35befda8633ff272981cc2575c860874791bd455b752f797fd7dbd1079f0ba42ccdd7bb1fe6773fa5e84b3d75667c2883dd1fb2d0e4a5fa4f8387",
+        "min_version": "1.3",
+        "options": [
+            "OPUS_PRESUME_NEON ON"
+        ],
+        "package": "Opus",
+        "patches": [
+            "0001-disable-clang-runtime-neon.patch",
+            "0002-no-install.patch"
+        ],
+        "repo": "xiph/opus",
+        "version": "a3f0ec02b3"
+    },
+    "qt": {
+        "artifact": "qt",
+        "ci": "true",
+        "hashes": {
+            "linux-aarch64": "ebc4d4b962557cbf7c0dff80dc0af523623bd873b3404436e30889991275607800292b893a8265610a1a7002542bd753f1a6fa83f97fbb2805765f251372b726",
+            "linux-amd64": "127da4d6bd677e4f6987a6b20a05397732a9bcfdab340aeecb1d533bcc36a098526ebeaae309f1808615e0e5147db9c0b9198a055df8c71838c09e0eb50105a0",
+            "macos-aarch64": "cb44fab5b932570c870974fad5d41fc371cb9cdc3d47d4c7aecec03ed65df74ef16bc6d0e9d05c3e46c6b5e08723572c8220c14c9668c7f0be15ae1df8b5fc5e",
+            "mingw-aarch64": "61da64d3dc6ca6e719333f629513449cc5b0a96b22b8b9f4f4813ee365d499f76602af82fed9ed55c94b5827f7c798e4e8182f3072a700a4170319a32f6c1b6a",
+            "mingw-amd64": "2ba58b19f86c0d29e5a61f4d7a397030d6cbccca677c91fc521448ec1f20cf5659b50b7e9b3d1ed8cba1f1f27c06ed6cbdde48a50a192514aa071de439be9916",
+            "windows-aarch64": "96ca1a232f92f9f6a366c2094aff6357facf768117262a3889a1884391b159989aae8c539d37887d9af6db9877789a9f488aa1a35f8ae0cd44bec7e1ae757c6c",
+            "windows-amd64": "0caab73afb9483b9b7ed94763cb600ff4a428ad14377e351e40d3848f6e2ea74a048a7d9065e878b137df12e471969e43bea2f62be8d34c25ce1818c7f55b029"
+        },
+        "package": "Qt6",
+        "repo": "Eden-CI/Qt",
+        "version": "6.11.3-1795405713"
+    },
+    "quazip": {
+        "hash": "609c240c7f029ac26a37d8fbab51bc16284e05e128b78b9b9c0e95d083538c36047a67d682759ac990e4adb0eeb90f04f1ea7fe2253bbda7e7e3bcce32e53dd8",
+        "min_version": "1.3",
+        "options": [
+            "QUAZIP_QT_MAJOR_VERSION 6",
+            "QUAZIP_INSTALL OFF",
+            "QUAZIP_ENABLE_QTEXTCODEC OFF",
+            "QUAZIP_BZIP2 OFF"
+        ],
+        "package": "QuaZip-Qt6",
+        "repo": "stachenov/quazip",
+        "version": "2e95c9001b"
+    },
+    "reshade": {
+        "hash": "6fc9b39821ca6e2d91160f05846b3a42159fec759f5d6fba91d1a57801a1bdaf6047740578c136f0b1a60a9c29ad160d87dbfe0dbfbcdf6ea879a8a078377b8c",
+        "patches": [
+            "0001-from-chars-fallback.patch"
+        ],
+        "repo": "crosire/reshade",
+        "version": "v6.8.0"
+    },
+    "sdl3": {
+        "hash": "df5a323af7ac366661a3c0e887969c72584d232f3cc211419d59b0487b620b6b2859d4549c9e8df002ee489290062e466fcfddf7edc0872a37b1f2845e81c0f3",
+        "min_version": "3.2.10",
+        "package": "SDL3",
+        "repo": "libsdl-org/SDL",
+        "version": "release-3.4.8"
+    },
+    "sdl3-ci": {
+        "ci": true,
+        "hashes": {
+            "android-aarch64": "45747f0a127352bd9d4bfbfeb8606239fb5a987228e694a960bb78e41b5512a44dd04d666b91e7d3f272eaf5fc9366306b7f5fef905fa36d53c5f8d2b8632310",
+            "android-amd64": "3a199927c94245397e80cf12f11d2b3a18a6093ae333e3cb13b39e731d06f787b40d792df2cd42bbb81adba7ecd3c8d01d6898480446a2e6ee7590739deb832e",
+            "ios-aarch64": "a31ad4790bf46fabc774542cc8bedae85febb7382fdad55c6454edcc093b6f3d2c4400fc9cb624c150e591d7c4df9959d5cbe78a413dc26a5ff652be4f9f4bf1",
+            "linux-aarch64": "7f26286577782faf28784d709f01d883ec830c0f1baa0019c0fe6a612a312da2a7f51ebe6db5d937fd85502ee6eedc26f9dbb6e0a538313d4f5f620c6ce96f8e",
+            "linux-amd64": "3d546126825d1391f8b70fa73acf90ea0a7f813438f97a0d1ce8f33855b4fa892890f4bcd713c4aefb948c173865b08def8817bd21842b8ca98cee2b135cfcdd",
+            "macos-aarch64": "513d11dd844ae74a2e05011610ce094bb16df9aa5e031a39310c5dcfc05e99e35ff77a76993687e36fd1056828775fa9aa9de4f332fe479b7bf08c42c5cfdb4e",
+            "mingw-aarch64": "3294b382b99b789c01592f4b9d6d06a7b5714f59848fc8fa14dbddf24e04b243329c27d00567c034b3ccb143d59e66e908f5d7b57612466576f1fab3337f8cd0",
+            "mingw-amd64": "7b4fd35f3fb1ab63b0bb0229fe980a3accda7b9779c1cebdfd201b17377fe1cb040f9fc1022b6303338a1431792bb6bbe180374a45ce96b571acc2600262669d",
+            "windows-aarch64": "d42211707110aa701abd5d214ed5ffd521f91a5c98e0febcf1ec7144cac45d8d211affe13342bb8ec01dee7be1dcb24202749f791cb4806ef8b663f28f46a049",
+            "windows-amd64": "b3032c1202445dc568144a0b1e49fcdcd68d2e33e3261a08fb5ac2a4dc368626f9661f8af6aa39983a61c29e698634fdb6b05a586d2b8c988eb1f19f786ed8ca"
+        },
+        "name": "SDL3",
+        "package": "SDL3",
+        "repo": "crueter-ci/SDL3",
+        "version": "3.4.14-1788231389-147a8ee32d"
+    },
+    "simpleini": {
+        "find_args": "MODULE",
+        "hash": "b937c18a7b6277d77ca7ebfb216af4984810f77af4c32d101b7685369a4bd5eb61406223f82698e167e6311a728d07415ab59639fdf19eff71ad6dc2abfda989",
+        "package": "SimpleIni",
+        "repo": "brofield/simpleini",
+        "version": "v4.25"
+    },
+    "sirit": {
+        "find_args": "CONFIG",
+        "hash": "b7cd6885acae3fc8698288d19febba0dd45e4a02a2b6563d2eb995a988d0847046e8d16a5dea7e0bf832b4321bcec134cdbafc553f6ede039e4cf34525c5dce5",
+        "options": [
+            "SIRIT_USE_SYSTEM_SPIRV_HEADERS ON"
+        ],
+        "repo": "eden-emulator/sirit",
+        "version": "v1.0.5"
+    },
+    "sirit-ci": {
+        "ci": true,
+        "hashes": {
+            "android-aarch64": "7d52fba4d04d5512ec9bb1057f086fe574982483e2483663f815cfbec983deafc98761ff331f76f8ad6af9567f15de37940bb502c79c6eef526bcf6fa4e2c368",
+            "android-amd64": "2b421a448fc9d5b775ce81007412ba874a38fbf62115ad3d023e22c70359cda6ab8eebae2e71eaa2bd58dd70e1a622509d78a8829ca903996a09185d7b07b552",
+            "ios-aarch64": "1cd85277e690c0694758dae85b969d15b9774a4246144b961dd38e567e239100d0b26d212b56ac96e3721a18d6e3b50a70ee65285029ab3f4f179482fbecaaae",
+            "linux-aarch64": "15b6fc5bcc4b1eba2e0b17bc73f98e0be1933979a90aef040eecfc55a9315522c2abb599fc8ec9be7f8c6fe12c57bfc5b997d2995c3bf6331f0e43e3f3ae2cbb",
+            "linux-amd64": "8c41cbbab4e1c927fde48ea66783ba49919962a1712bdbb28c6584043b7441d303565b3459237c28dad70f3a8e17700f49bdd50d20ebd848d86ace0c4b1cef42",
+            "macos-aarch64": "cd4084e43839273cc6320be9dd46c4f5b24c4c0fe28cf98b481d01e15ae63b3532c020b73d25a42001abcb74b1a08a4b6084db4b074ca7d732f4aaf42defdf4b",
+            "mingw-aarch64": "b542bb93ad6ccebf90497ac4063b1eba128304c630a0a9bab9ab1886c259cc41315ecb29b032adb7c22be379bd624a6dd2ecc91492a871fea34dabf11e3d9d31",
+            "mingw-amd64": "7b08f3fa7f99b86045d336325572b51b4c686327c607747be6f3586b70bcdf60139530603175fdc0b0a824ab552a2edb28fbe78feca22cc88e9e723cf534f081",
+            "windows-aarch64": "13a29e3df9a779b0de97bdf985c5fe3b322db4c9efc2582b1a546a8499b8a5d25e1816211652defd5eb2281ff3738fffd0e3645f942a4ef923d472721ff160f9",
+            "windows-amd64": "4b085968443095ecf53fd3ea09d3071e81b0115c55d41842a89938d6141a056b64154e92b8032245bb4e928de3d716b45523c3b040f4f9d52ed04d86823c825c"
+        },
+        "name": "sirit",
+        "package": "sirit",
+        "repo": "eden-emulator/sirit",
+        "version": "v1.0.7"
+    },
+    "spirv-headers": {
+        "hash": "d624371dd455c66a300344c89812598ffe11b5eedba555779f789e85c29dc67317741858c60e0744a1e6755cc0d2759b8659f0674f4cc31479c4cb6fc25ed23b",
+        "options": [
+            "SPIRV_WERROR OFF"
+        ],
+        "package": "SPIRV-Headers",
+        "repo": "KhronosGroup/SPIRV-Headers",
+        "version": "vulkan-sdk-1.4.341.0"
+    },
+    "tzdb": {
+        "artifact": "%VERSION%.tar.gz",
+        "git_host": "git.eden-emu.dev",
+        "hash": "cce65a12bf90f4ead43b24a0b95dfad77ac3d9bfbaaf66c55e6701346e7a1e44ca5d2f23f47ee35ee02271eb1082bf1762af207aad9fb236f1c8476812d008ed",
+        "package": "nx_tzdb",
+        "repo": "eden-emu/tzdb_to_nx",
+        "version": "230326"
+    },
+    "vulkan-headers": {
+        "hash": "d2846ea228415772645eea4b52a9efd33e6a563043dd3de059e798be6391a8f0ca089f455ae420ff22574939ed0f48ed7c6ff3d5a9987d5231dbf3b3f89b484b",
+        "min_version": "1.4.317",
+        "package": "VulkanHeaders",
+        "repo": "KhronosGroup/Vulkan-Headers",
+        "version": "v1.4.345"
+    },
+    "vulkan-memory-allocator": {
+        "find_args": "CONFIG",
+        "hash": "deb5902ef8db0e329fbd5f3f4385eb0e26bdd9f14f3a2334823fb3fe18f36bc5d235d620d6e5f6fe3551ec3ea7038638899db8778c09f6d5c278f5ff95c3344b",
+        "package": "VulkanMemoryAllocator",
+        "patches": [
+            "0001-macos-clang.patch"
+        ],
+        "repo": "GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator",
+        "version": "v3.3.0"
+    },
+    "vulkan-utility-libraries": {
+        "hash": "114f6b237a6dcba923ccc576befb5dea3f1c9b3a30de7dc741f234a831d1c2d52d8a224afb37dd57dffca67ac0df461eaaab6a5ab5e503b393f91c166680c3e1",
+        "package": "VulkanUtilityLibraries",
+        "repo": "KhronosGroup/Vulkan-Utility-Libraries",
+        "version": "v1.4.345"
+    },
+    "vulkan-validation-layers": {
+        "artifact": "android-binaries-%NUMERIC_VERSION%.zip",
+        "hash": "8812ae84cbe49e6a3418ade9c458d3be6d74a3dffd319d4502007b564d580998056e8190414368ec11b27bc83993c7a0dad713c31bcc3d9553b51243efee3753",
+        "numeric_version": "1.4.341.0",
+        "repo": "KhronosGroup/Vulkan-ValidationLayers",
+        "version": "vulkan-sdk-%NUMERIC_VERSION%"
+    },
+    "xbyak": {
+        "hash": "e0aa0a603dd3ac1a39d82213df1e73c042831aec2d6b2fe382c899651eaae4ed7e8aeb6be9c41ea0097087c9d091961ab18f313cd6a9e10d621715ffd49bfe36",
+        "package": "xbyak",
+        "repo": "herumi/xbyak",
+        "version": "v7.40.1"
+    },
+    "zbic": {
+        "hash": "fbe2f37986377d7f0d96ae3224c80b5971df6e8b6961f68061f1975ebb2e8cb78f07b90f014b007be4023dbf5513581504e7f7d61a5237cb2a8a7a61ae11e482",
+        "repo": "kinnay/zbic",
+        "version": "11b08f2712264bbed731545085cbd9702096ceb7"
+    },
+    "zlib": {
+        "hash": "16fea4df307a68cf0035858abe2fd550250618a97590e202037acd18a666f57afc10f8836cbbd472d54a0e76539d0e558cb26f059d53de52ff90634bbf4f47d4",
+        "min_version": "1.2",
+        "options": [
+            "ZLIB_BUILD_SHARED OFF",
+            "ZLIB_INSTALL OFF",
+            "ZLIB_BUILD_TESTING OFF"
+        ],
+        "package": "ZLIB",
+        "repo": "madler/zlib",
+        "version": "v1.3.2"
+    },
+    "zstd": {
+        "find_args": "MODULE",
+        "hash": "2b006c3c110c38bd2f5896b42d36a38931c8eae261f30552f9a9fd04458d218d8f1a1425f117fd12af545ed77042e4b2d1a1a9b6286c4d0b9d74ef79f20a8f08",
+        "min_version": "1.5",
+        "options": [
+            "ZSTD_BUILD_SHARED OFF",
+            "ZSTD_BUILD_PROGRAMS OFF"
+        ],
+        "repo": "facebook/zstd",
+        "source_subdir": "build/cmake",
+        "version": "33618c8"
+    }
+}
