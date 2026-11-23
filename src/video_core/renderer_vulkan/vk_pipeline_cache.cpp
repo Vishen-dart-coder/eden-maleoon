@@ -663,6 +663,9 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         return;
     }
     pipeline_cache_filename = base_dir / "vulkan.bin";
+    if (device.IsHuawei()) {
+        HuaweiSlowPipelines::SetPath(base_dir / "huawei_slow_pipelines.txt");
+    }
 
     if (use_vulkan_pipeline_cache) {
         vulkan_pipeline_cache_filename = base_dir / "vulkan_pipelines.bin";
@@ -703,6 +706,10 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         GraphicsPipelineCacheKey key;
         file.read(reinterpret_cast<char*>(&key), sizeof(key));
 
+        // Don't hold the loading screen on a pipeline that takes minutes; it builds when drawn.
+        if (device.IsHuawei() && HuaweiSlowPipelines::Contains(key.Hash())) {
+            return;
+        }
         if ((key.state.extended_dynamic_state != 0) !=
                 dynamic_features.has_extended_dynamic_state ||
             (key.state.extended_dynamic_state_2 != 0) !=

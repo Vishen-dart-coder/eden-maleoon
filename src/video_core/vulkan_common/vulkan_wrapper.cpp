@@ -12,6 +12,8 @@
 
 #include <csetjmp>
 #include <atomic>
+#include <thread>
+#include <array>
 #include <chrono>
 #include <mutex>
 #include "common/crash_guard.h"
@@ -762,10 +764,13 @@ PipelineLayout Device::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& ci
 }
 
 namespace {
-// Some drivers (Huawei Maleoon) are not thread-safe while compiling pipelines.
-std::timed_mutex g_pipeline_compile_mutex;
-// steady_clock time (ns) at which the current lock holder entered the driver, 0 when free.
-std::atomic<int64_t> g_compile_holder_start{0};
+// Huawei's compiler is not reliable with concurrent compiles and can spend minutes on a single
+// pipeline. Compiles are serialized, but a new slot opens whenever every busy slot is slow, so
+// one stuck pipeline never blocks the rest.
+constexpr size_t NUM_COMPILE_SLOTS = 4;
+constexpr int64_t SLOW_COMPILE_NS = 1'500'000'000;
+std::array<std::mutex, NUM_COMPILE_SLOTS> g_compile_slots;
+std::array<std::atomic<int64_t>, NUM_COMPILE_SLOTS> g_compile_slot_start{};
 
 int64_t NowNs() {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -773,25 +778,40 @@ int64_t NowNs() {
         .count();
 }
 
-// Serializes driver compiles, but never queues behind one that is taking a long time: Huawei's
-// compiler can spend minutes on a single pipeline.
-bool LockPipelineCompile() {
-    constexpr int64_t slow_threshold_ns = 1'500'000'000;
+int AcquireCompileSlot() {
     while (true) {
-        if (g_pipeline_compile_mutex.try_lock_for(std::chrono::milliseconds(25))) {
-            g_compile_holder_start.store(NowNs(), std::memory_order_relaxed);
-            return true;
+        const int64_t now = NowNs();
+        bool busy_slots_are_slow = true;
+        int free_slot = -1;
+        for (size_t i = 0; i < NUM_COMPILE_SLOTS; ++i) {
+            const int64_t start = g_compile_slot_start[i].load(std::memory_order_acquire);
+            if (start == 0) {
+                if (free_slot < 0) {
+                    free_slot = static_cast<int>(i);
+                }
+            } else if (now - start < SLOW_COMPILE_NS) {
+                busy_slots_are_slow = false;
+            }
         }
-        const int64_t start = g_compile_holder_start.load(std::memory_order_relaxed);
-        if (start != 0 && NowNs() - start > slow_threshold_ns) {
-            return false;
+        if (busy_slots_are_slow) {
+            if (free_slot < 0) {
+                return -1;
+            }
+            if (g_compile_slots[free_slot].try_lock()) {
+                g_compile_slot_start[free_slot].store(NowNs(), std::memory_order_release);
+                return free_slot;
+            }
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
-void UnlockPipelineCompile() {
-    g_compile_holder_start.store(0, std::memory_order_relaxed);
-    g_pipeline_compile_mutex.unlock();
+void ReleaseCompileSlot(int slot) {
+    if (slot < 0) {
+        return;
+    }
+    g_compile_slot_start[slot].store(0, std::memory_order_release);
+    g_compile_slots[slot].unlock();
 }
 } // Anonymous namespace
 
@@ -802,19 +822,15 @@ Pipeline Device::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& ci, 
         // Some drivers (Huawei Maleoon) crash inside their shader compiler; recover and treat
         // the pipeline as failed so emulation continues without it.
         sigjmp_buf env;
-        const bool locked = LockPipelineCompile();
+        const int slot = AcquireCompileSlot();
         if (sigsetjmp(env, 1) == 0) {
             Common::CrashGuard::Enter(&env);
             result = dld->vkCreateGraphicsPipelines(handle, cache, 1, &ci, nullptr, &object);
             Common::CrashGuard::Leave();
-            if (locked) {
-                UnlockPipelineCompile();
-            }
+            ReleaseCompileSlot(slot);
         } else {
             Common::CrashGuard::Leave();
-            if (locked) {
-                UnlockPipelineCompile();
-            }
+            ReleaseCompileSlot(slot);
             LOG_ERROR(Render_Vulkan, "Driver crashed compiling a graphics pipeline, skipping it");
             throw Exception(VK_ERROR_INITIALIZATION_FAILED);
         }
@@ -834,19 +850,15 @@ Pipeline Device::CreateComputePipeline(const VkComputePipelineCreateInfo& ci,
     VkResult result = VK_ERROR_INITIALIZATION_FAILED;
     {
         sigjmp_buf env;
-        const bool locked = LockPipelineCompile();
+        const int slot = AcquireCompileSlot();
         if (sigsetjmp(env, 1) == 0) {
             Common::CrashGuard::Enter(&env);
             result = dld->vkCreateComputePipelines(handle, cache, 1, &ci, nullptr, &object);
             Common::CrashGuard::Leave();
-            if (locked) {
-                UnlockPipelineCompile();
-            }
+            ReleaseCompileSlot(slot);
         } else {
             Common::CrashGuard::Leave();
-            if (locked) {
-                UnlockPipelineCompile();
-            }
+            ReleaseCompileSlot(slot);
             LOG_ERROR(Render_Vulkan, "Driver crashed compiling a compute pipeline, skipping it");
             throw Exception(VK_ERROR_INITIALIZATION_FAILED);
         }

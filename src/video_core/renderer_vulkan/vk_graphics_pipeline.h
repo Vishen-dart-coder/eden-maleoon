@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <filesystem>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -31,6 +33,13 @@ class ShaderNotify;
 }
 
 namespace Vulkan {
+
+/// Pipelines Huawei's compiler takes seconds to minutes on; not precompiled at boot.
+namespace HuaweiSlowPipelines {
+void SetPath(const std::filesystem::path& path);
+bool Contains(u64 hash);
+} // namespace HuaweiSlowPipelines
+
 
 struct GraphicsPipelineCacheKey {
     std::array<u64, 6> unique_hashes;

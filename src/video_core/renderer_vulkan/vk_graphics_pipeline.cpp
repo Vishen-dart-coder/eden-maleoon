@@ -5,6 +5,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -38,6 +46,77 @@
 #endif
 
 namespace Vulkan {
+namespace {
+std::mutex g_slow_mutex;
+std::filesystem::path g_slow_path;
+std::unordered_set<u64> g_slow_set;
+std::mutex g_in_flight_mutex;
+std::unordered_multimap<u64, std::chrono::steady_clock::time_point> g_in_flight;
+
+void RecordSlowPipeline(u64 hash) {
+    std::scoped_lock lock{g_slow_mutex};
+    if (!g_slow_set.insert(hash).second || g_slow_path.empty()) {
+        return;
+    }
+    std::ofstream file(g_slow_path, std::ios::app);
+    file << std::format("{:016x}\n", hash);
+}
+
+// Pipelines that have been in the driver for a long time may never return; remember them now.
+void ReportStuckPipelines() {
+    std::vector<u64> stuck;
+    {
+        std::scoped_lock lock{g_in_flight_mutex};
+        const auto now = std::chrono::steady_clock::now();
+        for (const auto& [hash, start] : g_in_flight) {
+            if (now - start > std::chrono::seconds(3)) {
+                stuck.push_back(hash);
+            }
+        }
+    }
+    for (const u64 hash : stuck) {
+        RecordSlowPipeline(hash);
+    }
+}
+
+struct InFlightCompile {
+    explicit InFlightCompile(u64 hash_) : hash{hash_} {
+        if (hash != 0) {
+            std::scoped_lock lock{g_in_flight_mutex};
+            g_in_flight.emplace(hash, std::chrono::steady_clock::now());
+        }
+    }
+    ~InFlightCompile() {
+        if (hash != 0) {
+            std::scoped_lock lock{g_in_flight_mutex};
+            if (const auto it = g_in_flight.find(hash); it != g_in_flight.end()) {
+                g_in_flight.erase(it);
+            }
+        }
+    }
+    u64 hash;
+};
+} // Anonymous namespace
+
+namespace HuaweiSlowPipelines {
+void SetPath(const std::filesystem::path& path) {
+    std::scoped_lock lock{g_slow_mutex};
+    g_slow_path = path;
+    std::ifstream file(path);
+    std::string line;
+    while (std::getline(file, line)) {
+        if (!line.empty()) {
+            g_slow_set.insert(std::strtoull(line.c_str(), nullptr, 16));
+        }
+    }
+}
+
+bool Contains(u64 hash) {
+    std::scoped_lock lock{g_slow_mutex};
+    return g_slow_set.contains(hash);
+}
+} // namespace HuaweiSlowPipelines
+
 namespace {
 using boost::container::small_vector;
 using boost::container::static_vector;
@@ -1125,7 +1204,11 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         flags |= VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
     }
 
+    if (device.IsHuawei()) {
+        ReportStuckPipelines();
+    }
     const auto compile_start = std::chrono::steady_clock::now();
+    const InFlightCompile in_flight{device.IsHuawei() ? key.Hash() : 0};
     pipeline = device.GetLogical().CreateGraphicsPipeline({
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
@@ -1146,13 +1229,16 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .subpass = 0,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = 0,
-    }, *pipeline_cache);
+    }, device.IsHuawei() ? VkPipelineCache{VK_NULL_HANDLE} : *pipeline_cache);
     if (device.IsHuawei()) {
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - compile_start)
                             .count();
         if (ms >= 500) {
             LOG_WARNING(Render_Vulkan, "Pipeline {:016x} took {} ms in the driver", key.Hash(), ms);
+        }
+        if (ms >= 3000) {
+            RecordSlowPipeline(key.Hash());
         }
     }
 
