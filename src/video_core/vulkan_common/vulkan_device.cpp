@@ -986,7 +986,7 @@ bool Device::ShouldBoostClocks() const {
 }
 
 bool Device::HasTimelineSemaphore() const {
-    if (GetDriverID() == VK_DRIVER_ID_MESA_TURNIP) {
+    if (GetDriverID() == VK_DRIVER_ID_MESA_TURNIP || IsHuawei()) {
         return false;
     }
     return features.timeline_semaphore.timelineSemaphore;
@@ -1290,6 +1290,14 @@ bool Device::GetSuitability(bool requires_swapchain) {
             RemoveExtensionFeature(extensions.vertex_input_dynamic_state,
                                    features.vertex_input_dynamic_state,
                                    VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);
+        }
+        // Avoid descriptor paths that are commonly broken on mobile proprietary drivers
+        if (extensions.push_descriptor) {
+            RemoveExtension(extensions.push_descriptor, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+        }
+        if (extensions.descriptor_buffer) {
+            RemoveExtensionFeature(extensions.descriptor_buffer, features.descriptor_buffer,
+                                   VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME);
         }
     }
 
