@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <csetjmp>
+#include "common/crash_guard.h"
 #include "common/common_types.h"
 #include "common/logging.h"
 #include "video_core/vulkan_common/vk_enum_string_helper.h"
@@ -758,7 +760,21 @@ PipelineLayout Device::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& ci
 
 Pipeline Device::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& ci, VkPipelineCache cache) const {
     VkPipeline object = VK_NULL_HANDLE;
-    auto const result = dld->vkCreateGraphicsPipelines(handle, cache, 1, &ci, nullptr, &object);
+    VkResult result = VK_ERROR_INITIALIZATION_FAILED;
+    {
+        // Some drivers (Huawei Maleoon) crash inside their shader compiler; recover and treat
+        // the pipeline as failed so emulation continues without it.
+        sigjmp_buf env;
+        if (sigsetjmp(env, 1) == 0) {
+            Common::CrashGuard::Enter(&env);
+            result = dld->vkCreateGraphicsPipelines(handle, cache, 1, &ci, nullptr, &object);
+            Common::CrashGuard::Leave();
+        } else {
+            Common::CrashGuard::Leave();
+            LOG_ERROR(Render_Vulkan, "Driver crashed compiling a graphics pipeline, skipping it");
+            throw Exception(VK_ERROR_INITIALIZATION_FAILED);
+        }
+    }
     // Adreno 5xx drivers do not properly return when a graphics pipeline fails to be created
     // Some (unkown) Mali drivers also do not properly return
     // This result code is out of spec, but should be handled as "kinda working"
@@ -770,8 +786,21 @@ Pipeline Device::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& ci, 
 
 Pipeline Device::CreateComputePipeline(const VkComputePipelineCreateInfo& ci,
                                        VkPipelineCache cache) const {
-    VkPipeline object;
-    Check(dld->vkCreateComputePipelines(handle, cache, 1, &ci, nullptr, &object));
+    VkPipeline object = VK_NULL_HANDLE;
+    VkResult result = VK_ERROR_INITIALIZATION_FAILED;
+    {
+        sigjmp_buf env;
+        if (sigsetjmp(env, 1) == 0) {
+            Common::CrashGuard::Enter(&env);
+            result = dld->vkCreateComputePipelines(handle, cache, 1, &ci, nullptr, &object);
+            Common::CrashGuard::Leave();
+        } else {
+            Common::CrashGuard::Leave();
+            LOG_ERROR(Render_Vulkan, "Driver crashed compiling a compute pipeline, skipping it");
+            throw Exception(VK_ERROR_INITIALIZATION_FAILED);
+        }
+    }
+    Check(result);
     return Pipeline(object, handle, *dld);
 }
 

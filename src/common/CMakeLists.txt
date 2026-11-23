@@ -34,6 +34,8 @@ add_library(
     bounded_threadsafe_queue.h
     cityhash.cpp
     cityhash.h
+    crash_guard.cpp
+    crash_guard.h
     common_funcs.h
     common_types.h
     concepts.h

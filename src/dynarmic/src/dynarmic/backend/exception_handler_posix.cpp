@@ -25,6 +25,7 @@
 
 #include "common/assert.h"
 #include "common/logging.h"
+#include "common/crash_guard.h"
 #include "common/common_types.h"
 #include "dynarmic/backend/exception_handler.h"
 #include "dynarmic/common/context.h"
@@ -163,6 +164,8 @@ void SigHandler::SigAction(int sig, siginfo_t* info, void* raw_context) {
 #endif
         LOG_ERROR(Core, "  fault address {:#018x}", reinterpret_cast<u64>(info->si_addr));
     }
+    // If the crash happened inside a guarded driver call, unwind back to it
+    Common::CrashGuard::TryRecover();
 
     struct sigaction* retry_sa = sig == SIGSEGV ? &sig_handler->old_sa_segv : &sig_handler->old_sa_bus;
     if (retry_sa->sa_flags & SA_SIGINFO) {
