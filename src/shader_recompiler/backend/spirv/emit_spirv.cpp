@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "common/settings.h"
+#include "shader_recompiler/backend/spirv/demote_phis.h"
 #include "shader_recompiler/backend/spirv/emit_spirv.h"
 #include "shader_recompiler/backend/spirv/emit_spirv_instructions.h"
 #include "shader_recompiler/backend/spirv/spirv_emit_context.h"
@@ -564,6 +565,9 @@ std::vector<u32> EmitSPIRV(const Profile& profile, const RuntimeInfo& runtime_in
     PatchPhiNodes(program, ctx);
     std::vector<u32> code{ctx.Assemble()};
     RewriteOpcodes(code, ctx.opcode_rewrites);
+    if (profile.has_broken_phi) {
+        DemotePhisToVariables(code);
+    }
     return code;
 }
 

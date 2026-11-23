@@ -897,6 +897,9 @@ void EmitContext::DefineWriteStorageCasLoopFunction(const Info& info) {
     if (!info.uses_int8 && !info.uses_int16) {
         return;
     }
+    if (False(info.used_storage_buffer_types & (IR::Type::U8 | IR::Type::U16))) {
+        return;
+    }
 
     AddCapability(spv::Capability::VariablePointersStorageBuffer);
 

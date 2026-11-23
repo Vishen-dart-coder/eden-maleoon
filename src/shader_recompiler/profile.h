@@ -93,6 +93,7 @@ struct Profile {
     bool has_broken_fp32_denorm_flush{};
     /// Driver shader compiler crashes on NoContraction decorations
     bool has_broken_no_contraction{};
+    bool has_broken_phi{};
     /// Dynamic vec4 indexing is broken on some OpenGL drivers
     bool has_gl_component_indexing_bug{};
     /// The precise type qualifier is broken in the fragment stage of some drivers

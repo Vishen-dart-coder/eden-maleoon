@@ -351,7 +351,8 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
       descriptor_buffer_ring{descriptor_buffer_ring_},
       render_pass_cache{render_pass_cache_}, buffer_cache{buffer_cache_},
       texture_cache{texture_cache_}, shader_notify{shader_notify_},
-      use_asynchronous_shaders{Settings::values.use_asynchronous_shaders.GetValue()},
+      use_asynchronous_shaders{Settings::values.use_asynchronous_shaders.GetValue() ||
+                               device_.IsHuawei()},
       use_vulkan_pipeline_cache{Settings::values.use_vulkan_driver_pipeline_cache.GetValue()},
       workers(device.HasBrokenParallelShaderCompiling() ? 1ULL : GetTotalPipelineWorkers(),
               "VkPipelineBuilder", {}, Common::ThreadPlacement::Background),
@@ -511,6 +512,7 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         profile.support_shared_int64_atomics = false;
         profile.support_float_controls = false;
         profile.has_broken_no_contraction = true;
+        profile.has_broken_phi = true;
         profile.support_explicit_workgroup_layout = false;
         profile.support_workgroup_layout_8bit_access = false;
         profile.support_workgroup_layout_16bit_access = false;
@@ -840,6 +842,10 @@ GraphicsPipeline* PipelineCache::BuiltPipeline(GraphicsPipeline* pipeline) const
                             regs.rasterize_enable == 0};
     if (side_effects) {
         return pipeline;
+    }
+    // Huawei's compiler can stall for a long time: never block the frame on it.
+    if (device.IsHuawei()) {
+        return nullptr;
     }
     // If something is using depth, we can assume that games are not rendering anything which
     // will be used one time.
