@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <csetjmp>
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include "common/crash_guard.h"
@@ -763,14 +764,34 @@ PipelineLayout Device::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& ci
 namespace {
 // Some drivers (Huawei Maleoon) are not thread-safe while compiling pipelines.
 std::timed_mutex g_pipeline_compile_mutex;
+// steady_clock time (ns) at which the current lock holder entered the driver, 0 when free.
+std::atomic<int64_t> g_compile_holder_start{0};
 
-// Serializes driver compiles, but never waits forever behind one that has hung.
+int64_t NowNs() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
+// Serializes driver compiles, but never queues behind one that is taking a long time: Huawei's
+// compiler can spend minutes on a single pipeline.
 bool LockPipelineCompile() {
-    if (g_pipeline_compile_mutex.try_lock_for(std::chrono::seconds(8))) {
-        return true;
+    constexpr int64_t slow_threshold_ns = 1'500'000'000;
+    while (true) {
+        if (g_pipeline_compile_mutex.try_lock_for(std::chrono::milliseconds(25))) {
+            g_compile_holder_start.store(NowNs(), std::memory_order_relaxed);
+            return true;
+        }
+        const int64_t start = g_compile_holder_start.load(std::memory_order_relaxed);
+        if (start != 0 && NowNs() - start > slow_threshold_ns) {
+            return false;
+        }
     }
-    LOG_WARNING(Render_Vulkan, "A pipeline compile is stuck in the driver, continuing without it");
-    return false;
+}
+
+void UnlockPipelineCompile() {
+    g_compile_holder_start.store(0, std::memory_order_relaxed);
+    g_pipeline_compile_mutex.unlock();
 }
 } // Anonymous namespace
 
@@ -787,12 +808,12 @@ Pipeline Device::CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo& ci, 
             result = dld->vkCreateGraphicsPipelines(handle, cache, 1, &ci, nullptr, &object);
             Common::CrashGuard::Leave();
             if (locked) {
-                g_pipeline_compile_mutex.unlock();
+                UnlockPipelineCompile();
             }
         } else {
             Common::CrashGuard::Leave();
             if (locked) {
-                g_pipeline_compile_mutex.unlock();
+                UnlockPipelineCompile();
             }
             LOG_ERROR(Render_Vulkan, "Driver crashed compiling a graphics pipeline, skipping it");
             throw Exception(VK_ERROR_INITIALIZATION_FAILED);
@@ -819,12 +840,12 @@ Pipeline Device::CreateComputePipeline(const VkComputePipelineCreateInfo& ci,
             result = dld->vkCreateComputePipelines(handle, cache, 1, &ci, nullptr, &object);
             Common::CrashGuard::Leave();
             if (locked) {
-                g_pipeline_compile_mutex.unlock();
+                UnlockPipelineCompile();
             }
         } else {
             Common::CrashGuard::Leave();
             if (locked) {
-                g_pipeline_compile_mutex.unlock();
+                UnlockPipelineCompile();
             }
             LOG_ERROR(Render_Vulkan, "Driver crashed compiling a compute pipeline, skipping it");
             throw Exception(VK_ERROR_INITIALIZATION_FAILED);

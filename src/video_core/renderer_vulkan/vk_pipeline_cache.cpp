@@ -354,7 +354,9 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
       use_asynchronous_shaders{Settings::values.use_asynchronous_shaders.GetValue() ||
                                device_.IsHuawei()},
       use_vulkan_pipeline_cache{Settings::values.use_vulkan_driver_pipeline_cache.GetValue()},
-      workers(device.HasBrokenParallelShaderCompiling() ? 1ULL : GetTotalPipelineWorkers(),
+      workers(device.HasBrokenParallelShaderCompiling() ? 1ULL
+              : device_.IsHuawei() ? std::max<size_t>(GetTotalPipelineWorkers(), 4ULL)
+                                   : GetTotalPipelineWorkers(),
               "VkPipelineBuilder", {}, Common::ThreadPlacement::Background),
       serialization_thread(1, "VkPipelineSerialization", {},
                            Common::ThreadPlacement::Background) {
@@ -963,6 +965,9 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
             modules[stage_index].SetObjectNameEXT(name.c_str());
         }
         previous_stage = &program;
+    }
+    if (device.IsHuawei()) {
+        LOG_INFO(Render_Vulkan, "Pipeline {:016x} modules: {}", key.Hash(), TakeShaderDumpNames());
     }
     Common::ThreadWorker* const thread_worker{build_in_parallel ? &workers : nullptr};
     return std::make_unique<GraphicsPipeline>(

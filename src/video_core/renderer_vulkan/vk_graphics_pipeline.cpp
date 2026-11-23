@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <iostream>
 #include <span>
@@ -1124,6 +1125,7 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         flags |= VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
     }
 
+    const auto compile_start = std::chrono::steady_clock::now();
     pipeline = device.GetLogical().CreateGraphicsPipeline({
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
@@ -1144,7 +1146,15 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .subpass = 0,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = 0,
-    }, device.IsHuawei() ? VkPipelineCache{VK_NULL_HANDLE} : *pipeline_cache);
+    }, *pipeline_cache);
+    if (device.IsHuawei()) {
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::steady_clock::now() - compile_start)
+                            .count();
+        if (ms >= 500) {
+            LOG_WARNING(Render_Vulkan, "Pipeline {:016x} took {} ms in the driver", key.Hash(), ms);
+        }
+    }
 
     // Log graphics pipeline creation
     if (GPU::Logging::IsActive()) {

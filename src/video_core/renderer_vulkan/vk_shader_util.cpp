@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <string>
+#include <utility>
 
 #include "common/cityhash.h"
 #include "common/common_types.h"
@@ -18,6 +20,8 @@
 namespace Vulkan {
 
 namespace {
+thread_local std::string g_recent_dumps;
+
 // Huawei's shader compiler crashes on some SPIR-V; keep each module on disk so the culprit
 // can be identified after a crash.
 void DumpSpirvForDiagnostics(std::span<const u32> code) {
@@ -32,11 +36,15 @@ void DumpSpirvForDiagnostics(std::span<const u32> code) {
         file.write(reinterpret_cast<const char*>(code.data()),
                    static_cast<std::streamsize>(code.size_bytes()));
         file.close();
-        LOG_WARNING(Render_Vulkan, "Compiling SPIR-V module {}", name);
+        g_recent_dumps += g_recent_dumps.empty() ? name : " " + name;
     } catch (...) {
     }
 }
 } // Anonymous namespace
+
+std::string TakeShaderDumpNames() {
+    return std::exchange(g_recent_dumps, {});
+}
 
 vk::ShaderModule BuildShader(const Device& device, std::span<const u32> code) {
     if (device.IsHuawei()) {
