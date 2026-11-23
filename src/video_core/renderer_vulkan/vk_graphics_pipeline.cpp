@@ -1106,6 +1106,16 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
                 .pSpecializationInfo = nullptr,
             });
     }
+    if (device.IsHuawei()) {
+        // Huawei's shader compiler crashes on geometry-stage pipelines and leaves the driver
+        // locked afterwards. Skip them before they reach the driver.
+        for (const auto& stage_ci : shader_stages) {
+            if (stage_ci.stage == VK_SHADER_STAGE_GEOMETRY_BIT) {
+                LOG_WARNING(Render_Vulkan, "Huawei Maleoon: skipping geometry shader pipeline");
+                throw vk::Exception(VK_ERROR_FEATURE_NOT_PRESENT);
+            }
+        }
+    }
     VkPipelineCreateFlags flags{};
     if (device.IsKhrPipelineExecutablePropertiesEnabled() && Settings::values.renderer_debug.GetValue()) {
         flags |= VK_PIPELINE_CREATE_CAPTURE_STATISTICS_BIT_KHR;
