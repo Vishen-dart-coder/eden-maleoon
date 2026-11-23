@@ -1144,7 +1144,7 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .subpass = 0,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = 0,
-    }, *pipeline_cache);
+    }, device.IsHuawei() ? VkPipelineCache{VK_NULL_HANDLE} : *pipeline_cache);
 
     // Log graphics pipeline creation
     if (GPU::Logging::IsActive()) {
