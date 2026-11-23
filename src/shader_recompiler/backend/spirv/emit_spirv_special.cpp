@@ -154,7 +154,10 @@ void EmitEmitVertex(EmitContext& ctx, const IR::Value& stream) {
         ConvertDepthMode(ctx);
     }
     if (!ctx.profile.support_geometry_streams) {
-        throw NotImplementedException("Geometry streams");
+        // Without multi-stream support only stream 0 can be rasterized
+        if (!stream.IsImmediate() || stream.U32() == 0) {
+            ctx.OpEmitVertex();
+        }
     } else if (stream.IsImmediate()) {
         ctx.OpEmitStreamVertex(ctx.Def(stream));
     } else {
@@ -167,7 +170,9 @@ void EmitEmitVertex(EmitContext& ctx, const IR::Value& stream) {
 
 void EmitEndPrimitive(EmitContext& ctx, const IR::Value& stream) {
     if (!ctx.profile.support_geometry_streams) {
-        throw NotImplementedException("Geometry streams");
+        if (!stream.IsImmediate() || stream.U32() == 0) {
+            ctx.OpEndPrimitive();
+        }
     } else if (stream.IsImmediate()) {
         ctx.OpEndStreamPrimitive(ctx.Def(stream));
     } else {

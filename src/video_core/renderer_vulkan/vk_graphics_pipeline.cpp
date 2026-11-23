@@ -741,6 +741,10 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
             if (!attribute.enabled || !stage_infos[0].loads.Generic(index)) {
                 continue;
             }
+            if (index >= device.GetMaxVertexInputAttributes() ||
+                attribute.buffer >= device.GetMaxVertexInputBindings()) {
+                continue;
+            }
             vertex_attributes.push_back({
                 .location = static_cast<u32>(index),
                 .binding = attribute.buffer,

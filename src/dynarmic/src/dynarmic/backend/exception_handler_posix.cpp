@@ -21,6 +21,7 @@
 #include <format>
 #include <print>
 #include <sys/mman.h>
+#include <dlfcn.h>
 
 #include "common/assert.h"
 #include "common/logging.h"
@@ -145,6 +146,23 @@ void SigHandler::SigAction(int sig, siginfo_t* info, void* raw_context) {
         }
     }
     LOG_ERROR(Core, "Unhandled {} at {:#018x}\n", sig == SIGSEGV ? "SIGSEGV" : "SIGBUS", CTX_PC);
+    {
+        const auto describe = [](const char* what, u64 addr) {
+            Dl_info dli{};
+            if (addr != 0 && dladdr(reinterpret_cast<void*>(addr), &dli) && dli.dli_fname) {
+                LOG_ERROR(Core, "  {} {:#018x} = {}+{:#x} ({})", what, addr, dli.dli_fname,
+                          addr - reinterpret_cast<u64>(dli.dli_fbase),
+                          dli.dli_sname ? dli.dli_sname : "?");
+            } else {
+                LOG_ERROR(Core, "  {} {:#018x} = <unknown module>", what, addr);
+            }
+        };
+        describe("pc", static_cast<u64>(CTX_PC));
+#if defined(ARCHITECTURE_arm64) && defined(CTX_LR)
+        describe("lr", static_cast<u64>(CTX_LR));
+#endif
+        LOG_ERROR(Core, "  fault address {:#018x}", reinterpret_cast<u64>(info->si_addr));
+    }
 
     struct sigaction* retry_sa = sig == SIGSEGV ? &sig_handler->old_sa_segv : &sig_handler->old_sa_bus;
     if (retry_sa->sa_flags & SA_SIGINFO) {
