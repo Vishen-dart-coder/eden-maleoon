@@ -12,7 +12,9 @@ namespace {
 Id Decorate(EmitContext& ctx, IR::Inst* inst, Id op) {
     const auto flags{inst->Flags<IR::FpControl>()};
     if (flags.no_contraction) {
-        ctx.Decorate(op, spv::Decoration::NoContraction);
+        if (!ctx.profile.has_broken_no_contraction) {
+            ctx.Decorate(op, spv::Decoration::NoContraction);
+        }
     }
     return op;
 }

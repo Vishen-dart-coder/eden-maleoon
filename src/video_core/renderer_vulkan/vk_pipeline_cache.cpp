@@ -510,6 +510,7 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         profile.support_int64_atomics = false;
         profile.support_shared_int64_atomics = false;
         profile.support_float_controls = false;
+        profile.has_broken_no_contraction = true;
         profile.support_explicit_workgroup_layout = false;
         profile.support_workgroup_layout_8bit_access = false;
         profile.support_workgroup_layout_16bit_access = false;
