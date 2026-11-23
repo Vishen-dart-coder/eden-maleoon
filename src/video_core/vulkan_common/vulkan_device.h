@@ -1022,6 +1022,18 @@ FN_MAX_LIMIT_LIST
         return features2.features.multiViewport;
     }
 
+    bool SupportsLogicOp() const {
+        return features.features.logicOp;
+    }
+
+    bool SupportsDualSrcBlend() const {
+        return features.features.dualSrcBlend;
+    }
+
+    bool IsExtVertexAttributeDivisorSupported() const {
+        return extensions.vertex_attribute_divisor;
+    }
+
     /// Returns true if the device supports VK_KHR_maintenance1.
     bool IsKhrMaintenance1Supported() const {
         return extensions.maintenance1;

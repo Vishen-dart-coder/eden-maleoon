@@ -766,7 +766,7 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .vertexBindingDivisorCount = static_cast<u32>(vertex_binding_divisors.size()),
         .pVertexBindingDivisors = vertex_binding_divisors.data(),
     };
-    if (!vertex_binding_divisors.empty()) {
+    if (!vertex_binding_divisors.empty() && device.IsExtVertexAttributeDivisorSupported()) {
         vertex_input_ci.pNext = &input_divisor_ci;
     }
     const bool has_tess_stages = spv_modules[1] || spv_modules[2];
@@ -968,11 +968,11 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         }
         cb_attachments.push_back({
             .blendEnable = blend.enable != 0,
-            .srcColorBlendFactor = MaxwellToVK::BlendFactor(blend.SourceRGBFactor()),
-            .dstColorBlendFactor = MaxwellToVK::BlendFactor(blend.DestRGBFactor()),
+            .srcColorBlendFactor = MaxwellToVK::BlendFactor(blend.SourceRGBFactor(), device.SupportsDualSrcBlend()),
+            .dstColorBlendFactor = MaxwellToVK::BlendFactor(blend.DestRGBFactor(), device.SupportsDualSrcBlend()),
             .colorBlendOp = MaxwellToVK::BlendEquation(blend.EquationRGB()),
-            .srcAlphaBlendFactor = MaxwellToVK::BlendFactor(blend.SourceAlphaFactor()),
-            .dstAlphaBlendFactor = MaxwellToVK::BlendFactor(blend.DestAlphaFactor()),
+            .srcAlphaBlendFactor = MaxwellToVK::BlendFactor(blend.SourceAlphaFactor(), device.SupportsDualSrcBlend()),
+            .dstAlphaBlendFactor = MaxwellToVK::BlendFactor(blend.DestAlphaFactor(), device.SupportsDualSrcBlend()),
             .alphaBlendOp = MaxwellToVK::BlendEquation(blend.EquationAlpha()),
             .colorWriteMask = write_mask,
         });
@@ -981,7 +981,7 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .logicOpEnable = dynamic.logic_op_enable != 0,
+        .logicOpEnable = dynamic.logic_op_enable != 0 && device.SupportsLogicOp(),
         .logicOp = static_cast<VkLogicOp>(dynamic.logic_op.Value()),
         .attachmentCount = static_cast<u32>(cb_attachments.size()),
         .pAttachments = cb_attachments.data(),

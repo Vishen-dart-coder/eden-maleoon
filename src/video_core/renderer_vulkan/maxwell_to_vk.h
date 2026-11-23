@@ -62,7 +62,7 @@ VkStencilOp StencilOp(Maxwell::StencilOp::Op stencil_op);
 
 VkBlendOp BlendEquation(Maxwell::Blend::Equation equation);
 
-VkBlendFactor BlendFactor(Maxwell::Blend::Factor factor);
+VkBlendFactor BlendFactor(Maxwell::Blend::Factor factor, bool dual_src = true);
 
 VkFrontFace FrontFace(Maxwell::FrontFace front_face);
 

@@ -705,7 +705,7 @@ VkBlendOp BlendEquation(Maxwell::Blend::Equation equation) {
     return {};
 }
 
-VkBlendFactor BlendFactor(Maxwell::Blend::Factor factor) {
+VkBlendFactor BlendFactor(Maxwell::Blend::Factor factor, bool dual_src) {
     switch (factor) {
     case Maxwell::Blend::Factor::Zero_D3D:
     case Maxwell::Blend::Factor::Zero_GL:
@@ -742,16 +742,16 @@ VkBlendFactor BlendFactor(Maxwell::Blend::Factor factor) {
         return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
     case Maxwell::Blend::Factor::Source1Color_D3D:
     case Maxwell::Blend::Factor::Source1Color_GL:
-        return VK_BLEND_FACTOR_SRC1_COLOR;
+        return dual_src ? VK_BLEND_FACTOR_SRC1_COLOR : VK_BLEND_FACTOR_SRC_COLOR;
     case Maxwell::Blend::Factor::OneMinusSource1Color_D3D:
     case Maxwell::Blend::Factor::OneMinusSource1Color_GL:
-        return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+        return dual_src ? VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR : VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
     case Maxwell::Blend::Factor::Source1Alpha_D3D:
     case Maxwell::Blend::Factor::Source1Alpha_GL:
-        return VK_BLEND_FACTOR_SRC1_ALPHA;
+        return dual_src ? VK_BLEND_FACTOR_SRC1_ALPHA : VK_BLEND_FACTOR_SRC_ALPHA;
     case Maxwell::Blend::Factor::OneMinusSource1Alpha_D3D:
     case Maxwell::Blend::Factor::OneMinusSource1Alpha_GL:
-        return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+        return dual_src ? VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA : VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     case Maxwell::Blend::Factor::BlendFactor_D3D:
     case Maxwell::Blend::Factor::ConstantColor_GL:
         return VK_BLEND_FACTOR_CONSTANT_COLOR;
