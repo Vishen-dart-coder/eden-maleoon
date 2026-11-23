@@ -838,6 +838,17 @@ GraphicsPipeline* PipelineCache::BuiltPipeline(GraphicsPipeline* pipeline) const
     if (!use_asynchronous_shaders) {
         return pipeline;
     }
+    if (device.IsHuawei()) {
+        // Draw everything that compiles in time; only pipelines Huawei's compiler is slow on are
+        // skipped, and only until they finish. Draws other passes depend on must still wait.
+        if (pipeline->WaitBuiltWithinBudget()) {
+            return pipeline;
+        }
+        const auto& regs = maxwell3d->regs;
+        const bool must_draw{pipeline->HasSideEffects() || regs.transform_feedback_enabled != 0 ||
+                             regs.rasterize_enable == 0};
+        return must_draw ? pipeline : nullptr;
+    }
     {
         const auto& rt0 = maxwell3d->regs.rt[0];
         const u64 area = u64{rt0.width} * u64{rt0.height};
@@ -853,10 +864,6 @@ GraphicsPipeline* PipelineCache::BuiltPipeline(GraphicsPipeline* pipeline) const
                             regs.rasterize_enable == 0};
     if (side_effects) {
         return pipeline;
-    }
-    // Huawei's compiler can stall for a long time: never block the frame on it.
-    if (device.IsHuawei()) {
-        return nullptr;
     }
     // If something is using depth, we can assume that games are not rendering anything which
     // will be used one time.

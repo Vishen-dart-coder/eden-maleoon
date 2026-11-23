@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <type_traits>
@@ -138,6 +139,24 @@ public:
                                            : nullptr;
     }
 
+    /// Waits briefly for an in-flight build so fast pipelines draw on their first frame instead
+    /// of being skipped. Each pipeline gets a small total budget; GPU thread only.
+    [[nodiscard]] bool WaitBuiltWithinBudget() {
+        if (IsBuilt()) {
+            return true;
+        }
+        if (wait_budget.count() <= 0) {
+            return false;
+        }
+        const auto start = std::chrono::steady_clock::now();
+        std::unique_lock lock{build_mutex};
+        const bool built = build_condvar.wait_for(
+            lock, wait_budget, [this] { return is_built.load(std::memory_order::relaxed); });
+        wait_budget -= std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start);
+        return built;
+    }
+
     [[nodiscard]] bool IsBuilt() const noexcept {
         return is_built.load(std::memory_order::relaxed);
     }
@@ -211,6 +230,7 @@ private:
 
     std::condition_variable build_condvar;
     std::mutex build_mutex;
+    std::chrono::milliseconds wait_budget{300};
     std::atomic_bool is_built{false};
     bool uses_push_descriptor{false};
     bool uses_descriptor_buffer{false};
