@@ -44,6 +44,18 @@ void LayerPass(IR::Program& program, const HostTranslateInfo& host_info) {
     }
 
     const auto end{program.post_order_blocks.end()};
+    if (host_info.drop_layer_writes) {
+        for (auto block = program.post_order_blocks.begin(); block != end; ++block) {
+            for (IR::Inst& inst : (*block)->Instructions()) {
+                if (inst.GetOpcode() == IR::Opcode::SetAttribute &&
+                    inst.Arg(0).Attribute() == IR::Attribute::Layer) {
+                    inst.Invalidate();
+                }
+            }
+        }
+        program.info.stores.Set(IR::Attribute::Layer, false);
+        return;
+    }
     const auto layer_attribute = EmulatedLayerAttribute(program.info.stores);
     bool requires_layer_emulation = false;
 

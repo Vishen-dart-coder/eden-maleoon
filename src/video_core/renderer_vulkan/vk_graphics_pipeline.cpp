@@ -1191,7 +1191,8 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         // locked afterwards. Skip them before they reach the driver.
         for (const auto& stage_ci : shader_stages) {
             if (stage_ci.stage == VK_SHADER_STAGE_GEOMETRY_BIT) {
-                LOG_WARNING(Render_Vulkan, "Huawei Maleoon: skipping geometry shader pipeline");
+                LOG_WARNING(Render_Vulkan, "Huawei Maleoon: skipping {} geometry pipeline {:016x}",
+                            key.unique_hashes[4] != 0 ? "guest" : "emulated", key.Hash());
                 throw vk::Exception(VK_ERROR_FEATURE_NOT_PRESENT);
             }
         }

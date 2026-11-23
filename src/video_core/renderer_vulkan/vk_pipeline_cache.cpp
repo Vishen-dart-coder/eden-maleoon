@@ -532,6 +532,8 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         host_info.support_float64 = false;
         host_info.support_int64 = false;
         host_info.single_lane_geometry_subgroups = true;
+        // Geometry pipelines crash Huawei's compiler; render layered draws to layer 0 instead.
+        host_info.drop_layer_writes = !host_info.support_viewport_index_layer;
     }
     host_info.ApplyDescriptorLimitPolicy();
 
