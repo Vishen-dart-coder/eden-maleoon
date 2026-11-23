@@ -32,8 +32,8 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
           CCACHE_MAXSIZE: 2G
-        run: ./gradlew assembleMainlineRelease --no-daemon --parallel
+        run: ./gradlew assembleLegacyRelease --no-daemon --parallel
       - uses: actions/upload-artifact@v4
         with:
           name: eden-maleoon-apk
-          path: src/android/app/build/outputs/apk/mainline/release/*.apk
+          path: src/android/app/build/outputs/apk/legacy/release/*.apk
