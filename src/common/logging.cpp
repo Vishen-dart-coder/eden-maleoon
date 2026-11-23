@@ -287,8 +287,12 @@ struct FileBackend final : public Backend {
         bytes_written += file->WriteSpan(std::span<const char>{message.begin(), message.end()});
 
         // Option to log each line rather than 4k buffers
+#ifdef __ANDROID__
+        file->Flush(); // keep the last lines when the app is killed by a crash
+#else
         if (Settings::values.log_flush_line.GetValue())
             file->Flush();
+#endif
 
         using namespace Common::Literals;
         // Prevent logs from exceeding a set maximum size in the event that log entries are spammed.
@@ -441,7 +445,11 @@ void SetColorConsoleBackendEnabled(bool enabled) {
 
 void FmtLogMessageImpl(Class log_class, Level log_level, const char* filename, unsigned int line_num, const char* function, std::string_view format, const std::format_args& args) {
     if (logging_instance && logging_instance->filter.CheckMessage(log_class, log_level)) {
+#ifdef __ANDROID__
+        auto const flush = true;
+#else
         auto const flush = ::Settings::values.log_flush_line.GetValue();
+#endif
 
         std::string msg = std::vformat(format, args);
 
