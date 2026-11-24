@@ -741,9 +741,8 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         GraphicsPipelineCacheKey key;
         file.read(reinterpret_cast<char*>(&key), sizeof(key));
 
-        // Preloading every pipeline a game has ever used costs gigabytes on this driver. Leave
-        // them to be created when drawn; the driver's own cache makes that quick.
-        if (device.IsHuawei()) {
+        // Pipelines known to take minutes are left to build when drawn.
+        if (device.IsHuawei() && HuaweiSlowPipelines::Contains(key.Hash())) {
             ++huawei_skipped_preloads;
             return;
         }
