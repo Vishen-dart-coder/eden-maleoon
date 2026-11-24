@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include <algorithm>
+#include <string>
+#include <cstdlib>
+#include <atomic>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -51,6 +54,35 @@
 #endif
 
 namespace Vulkan {
+namespace {
+// True once the system has less than ~900 MB available; latched so preloading stops for good.
+bool PreloadMemoryIsLow() {
+    static std::atomic<bool> low{false};
+    static std::atomic<u32> calls{0};
+    if (low.load(std::memory_order_relaxed)) {
+        return true;
+    }
+    if (calls.fetch_add(1, std::memory_order_relaxed) % 16 != 0) {
+        return false;
+    }
+    std::ifstream meminfo("/proc/meminfo");
+    std::string line;
+    while (std::getline(meminfo, line)) {
+        if (line.starts_with("MemAvailable:")) {
+            const u64 kb = std::strtoull(line.c_str() + 13, nullptr, 10);
+            if (kb != 0 && kb < 900'000) {
+                low.store(true, std::memory_order_relaxed);
+                LOG_WARNING(Render_Vulkan, "Only {} MB of memory available, stopping shader preload",
+                            kb / 1024);
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
+}
+} // Anonymous namespace
+
 
 namespace {
 using Shader::Backend::SPIRV::EmitSPIRV;
@@ -746,8 +778,13 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
             for (auto& env : envs_) {
                 env_ptrs.push_back(&env);
             }
-            auto pipeline{CreateGraphicsPipeline(pools, key, MakeSpan(env_ptrs),
-                                                 state.statistics.get(), false)};
+            // Preloading every pipeline can use more memory than the tablet has free; once memory
+            // is short, leave the rest to be built when they are drawn.
+            std::unique_ptr<GraphicsPipeline> pipeline;
+            if (!device.IsHuawei() || !PreloadMemoryIsLow()) {
+                pipeline = CreateGraphicsPipeline(pools, key, MakeSpan(env_ptrs),
+                                                  state.statistics.get(), false);
+            }
 
             std::scoped_lock lock{state.mutex};
             if (pipeline) {

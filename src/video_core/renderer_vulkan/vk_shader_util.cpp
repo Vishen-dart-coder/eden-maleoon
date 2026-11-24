@@ -47,7 +47,11 @@ std::string TakeShaderDumpNames() {
 }
 
 vk::ShaderModule BuildShader(const Device& device, std::span<const u32> code) {
-    if (device.IsHuawei()) {
+    // Dumping every module costs thousands of file writes per launch; only do it when a file
+    // named "dump_spirv" exists in the log folder.
+    static const bool dump_enabled = std::filesystem::exists(
+        Common::FS::GetEdenPath(Common::FS::EdenPath::LogDir) / "dump_spirv");
+    if (dump_enabled && device.IsHuawei()) {
         DumpSpirvForDiagnostics(code);
     }
     return device.GetLogical().CreateShaderModule({
