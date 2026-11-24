@@ -767,7 +767,8 @@ namespace {
 // Huawei's compiler is not reliable with concurrent compiles and can spend minutes on a single
 // pipeline. Compiles are serialized, but a new slot opens whenever every busy slot is slow, so
 // one stuck pipeline never blocks the rest.
-constexpr size_t NUM_COMPILE_SLOTS = 4;
+constexpr size_t NUM_COMPILE_SLOTS = 6;
+constexpr size_t MAX_PARALLEL_COMPILES = 3;
 constexpr int64_t SLOW_COMPILE_NS = 1'500'000'000;
 std::array<std::mutex, NUM_COMPILE_SLOTS> g_compile_slots;
 std::array<std::atomic<int64_t>, NUM_COMPILE_SLOTS> g_compile_slot_start{};
@@ -781,7 +782,7 @@ int64_t NowNs() {
 int AcquireCompileSlot() {
     while (true) {
         const int64_t now = NowNs();
-        bool busy_slots_are_slow = true;
+        size_t fast_busy = 0;
         int free_slot = -1;
         for (size_t i = 0; i < NUM_COMPILE_SLOTS; ++i) {
             const int64_t start = g_compile_slot_start[i].load(std::memory_order_acquire);
@@ -790,10 +791,10 @@ int AcquireCompileSlot() {
                     free_slot = static_cast<int>(i);
                 }
             } else if (now - start < SLOW_COMPILE_NS) {
-                busy_slots_are_slow = false;
+                ++fast_busy;
             }
         }
-        if (busy_slots_are_slow) {
+        if (fast_busy < MAX_PARALLEL_COMPILES) {
             if (free_slot < 0) {
                 return -1;
             }
@@ -802,7 +803,7 @@ int AcquireCompileSlot() {
                 return free_slot;
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
 

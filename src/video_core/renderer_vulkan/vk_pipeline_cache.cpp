@@ -1020,7 +1020,9 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline(
         previous_stage = &program;
     }
     if (device.IsHuawei()) {
-        LOG_INFO(Render_Vulkan, "Pipeline {:016x} modules: {}", key.Hash(), TakeShaderDumpNames());
+        if (const std::string names = TakeShaderDumpNames(); !names.empty()) {
+            LOG_INFO(Render_Vulkan, "Pipeline {:016x} modules: {}", key.Hash(), names);
+        }
     }
     Common::ThreadWorker* const thread_worker{build_in_parallel ? &workers : nullptr};
     return std::make_unique<GraphicsPipeline>(
