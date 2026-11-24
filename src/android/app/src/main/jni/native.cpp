@@ -8,6 +8,12 @@
 #include "video_core/vulkan_common/vma.h"
 
 #include <codecvt>
+#include <csignal>
+#include <cstdlib>
+#include <exception>
+#include <fstream>
+#include <utility>
+#include <ucontext.h>
 #include <cstdio>
 #include <cstring>
 #include <format>
@@ -406,6 +412,70 @@ void EmulationSession::HaltEmulation() {
 }
 
 namespace {
+// Diagnostics: leave a line in the log when the process dies without one.
+void LogFatalSignal(int sig, siginfo_t* info, void* raw_context) {
+    const auto* context = static_cast<const ucontext_t*>(raw_context);
+    uintptr_t pc = 0;
+#if defined(__aarch64__)
+    pc = static_cast<uintptr_t>(context->uc_mcontext.pc);
+#endif
+    Dl_info dl{};
+    const char* module = "?";
+    uintptr_t offset = 0;
+    if (pc != 0 && dladdr(reinterpret_cast<void*>(pc), &dl) != 0 && dl.dli_fname) {
+        module = dl.dli_fname;
+        offset = pc - reinterpret_cast<uintptr_t>(dl.dli_fbase);
+    }
+    LOG_CRITICAL(Frontend, "Fatal signal {} code {} at {}+0x{:x} fault address 0x{:x}", sig,
+                 info ? info->si_code : 0, module, offset,
+                 info ? reinterpret_cast<uintptr_t>(info->si_addr) : 0);
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
+void InstallCrashDiagnostics() {
+    static bool installed = false;
+    if (std::exchange(installed, true)) {
+        return;
+    }
+    std::set_terminate([] {
+        try {
+            if (const auto ex = std::current_exception()) {
+                std::rethrow_exception(ex);
+            }
+            LOG_CRITICAL(Frontend, "std::terminate called without an exception");
+        } catch (const std::exception& e) {
+            LOG_CRITICAL(Frontend, "Uncaught exception: {}", e.what());
+        } catch (...) {
+            LOG_CRITICAL(Frontend, "Uncaught exception of unknown type");
+        }
+        std::abort();
+    });
+    struct sigaction action {};
+    action.sa_sigaction = LogFatalSignal;
+    action.sa_flags = SA_SIGINFO;
+    for (const int sig : {SIGABRT, SIGILL, SIGFPE}) {
+        sigaction(sig, &action, nullptr);
+    }
+}
+
+void LogMemoryStatus() {
+    std::ifstream meminfo("/proc/meminfo");
+    std::ifstream status("/proc/self/status");
+    std::string line, available, rss;
+    while (std::getline(meminfo, line)) {
+        if (line.starts_with("MemAvailable:")) {
+            available = line.substr(13);
+        }
+    }
+    while (std::getline(status, line)) {
+        if (line.starts_with("VmRSS:")) {
+            rss = line.substr(6);
+        }
+    }
+    LOG_INFO(Frontend, "Memory: available{} | Eden uses{}", available, rss);
+}
+
 bool DiskShaderCacheEnabled() {
     if (!Settings::values.use_disk_shader_cache.GetValue()) {
         LOG_WARNING(Frontend, "Disk shader cache was disabled in settings, using it anyway");
@@ -419,6 +489,9 @@ void EmulationSession::RunEmulation() {
         std::scoped_lock lock(m_mutex);
         m_is_running = true;
     }
+
+    InstallCrashDiagnostics();
+    LogMemoryStatus();
 
     // Load the disk shader cache. Always on in this build: without it nothing compiled is kept
     // between launches, and every scene has to be compiled again.
@@ -437,7 +510,11 @@ void EmulationSession::RunEmulation() {
         m_system.InitializeDebugger();
     }
 
+    u32 memory_log_ticks = 0;
     while (true) {
+        if (++memory_log_ticks % 6 == 0) {
+            LogMemoryStatus();
+        }
         std::optional<u64> reload_title;
         {
             [[maybe_unused]] std::unique_lock lock(m_mutex);
