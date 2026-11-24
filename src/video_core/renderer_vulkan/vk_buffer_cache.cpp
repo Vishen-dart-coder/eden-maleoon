@@ -359,9 +359,11 @@ BufferCacheRuntime::BufferCacheRuntime(const Device& device_, MemoryAllocator& m
                       compute_pass_descriptor_queue),
       multi_range_buffers(device_) {
     const VkDriverIdKHR driver_id = device.GetDriverID();
-    limit_dynamic_storage_buffers = driver_id == VK_DRIVER_ID_QUALCOMM_PROPRIETARY ||
-                                    driver_id == VK_DRIVER_ID_ARM_PROPRIETARY ||
-                                    device.IsHuawei();
+    // Eden binds plain storage buffers, not dynamic ones. On Huawei, leaving the rest unbound
+    // makes compute shaders read stale descriptors and takes the GPU down.
+    limit_dynamic_storage_buffers = (driver_id == VK_DRIVER_ID_QUALCOMM_PROPRIETARY ||
+                                     driver_id == VK_DRIVER_ID_ARM_PROPRIETARY) &&
+                                    !device.IsHuawei();
     if (limit_dynamic_storage_buffers) {
         max_dynamic_storage_buffers = device.GetMaxDescriptorSetStorageBuffersDynamic();
     }    
