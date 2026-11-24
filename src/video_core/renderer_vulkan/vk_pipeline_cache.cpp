@@ -736,12 +736,15 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         });
         ++state.total;
     }};
+    size_t huawei_skipped_preloads = 0;
     const auto load_graphics{[&](std::ifstream& file, std::vector<FileEnvironment> envs) {
         GraphicsPipelineCacheKey key;
         file.read(reinterpret_cast<char*>(&key), sizeof(key));
 
-        // Don't hold the loading screen on a pipeline that takes minutes; it builds when drawn.
-        if (device.IsHuawei() && HuaweiSlowPipelines::Contains(key.Hash())) {
+        // Preloading every pipeline a game has ever used costs gigabytes on this driver. Leave
+        // them to be created when drawn; the driver's own cache makes that quick.
+        if (device.IsHuawei()) {
+            ++huawei_skipped_preloads;
             return;
         }
         if ((key.state.extended_dynamic_state != 0) !=
@@ -801,6 +804,14 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
                                load_graphics);
 
     LOG_INFO(Render_Vulkan, "Total Pipeline Count: {}", state.total);
+    if (device.IsHuawei()) {
+        size_t driver_cache_size = 0;
+        if (use_vulkan_pipeline_cache) {
+            vulkan_pipeline_cache.Read(&driver_cache_size, nullptr);
+        }
+        LOG_INFO(Render_Vulkan, "Huawei: {} pipelines left to load on demand, driver cache {} MB",
+                 huawei_skipped_preloads, driver_cache_size >> 20);
+    }
 
     std::unique_lock lock{state.mutex};
     callback(VideoCore::LoadCallbackStage::Build, 0, state.total);
