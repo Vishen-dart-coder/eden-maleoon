@@ -315,7 +315,23 @@ FormatInfo SurfaceFormat(const Device& device, FormatType format_type, bool with
         }
         break;
     }
-    return {device.GetSupportedFormat(tuple.format, usage, format_type), attachable, storage};
+    const VkFormat supported = device.GetSupportedFormat(tuple.format, usage, format_type);
+    if (device.IsHuawei() && format_type != FormatType::Buffer &&
+        !device.IsFormatSupported(supported, usage, format_type)) {
+        // Huawei rejects images created with usages their format lacks, which leaves textures
+        // missing or garbled. Keep what the format can do: drop storage, then attachment.
+        const VkFormatFeatureFlags no_storage = usage & ~VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+        const VkFormatFeatureFlags sample_only =
+            no_storage & ~(VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+                           VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        if (device.IsFormatSupported(tuple.format, no_storage, format_type)) {
+            return {tuple.format, attachable, false};
+        }
+        if (device.IsFormatSupported(tuple.format, sample_only, format_type)) {
+            return {tuple.format, false, false};
+        }
+    }
+    return {supported, attachable, storage};
 }
 
 VkShaderStageFlagBits ShaderStage(Shader::Stage stage) {
