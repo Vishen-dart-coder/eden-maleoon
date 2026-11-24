@@ -519,6 +519,11 @@ Device::Device(VkInstance instance_, vk::PhysicalDevice physical_, VkSurfaceKHR 
     CollectPhysicalMemoryInfo();
     CollectToolingInfo();
 
+    if (IsHuawei()) {
+        // Plain std140 vec4 arrays for constant buffers: Huawei's compiler is very slow on several
+        // scalar-strided views aliased on one binding.
+        has_broken_descriptor_aliasing = true;
+    }
     if (is_qualcomm) {
         must_emulate_scaled_formats = true;
         LOG_WARNING(Render_Vulkan, "Qualcomm drivers require scaled vertex format emulation.");

@@ -1230,7 +1230,7 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .subpass = 0,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = 0,
-    }, device.IsHuawei() ? VkPipelineCache{VK_NULL_HANDLE} : *pipeline_cache);
+    }, *pipeline_cache);
     if (device.IsHuawei()) {
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - compile_start)

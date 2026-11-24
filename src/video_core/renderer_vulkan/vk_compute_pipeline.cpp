@@ -111,7 +111,7 @@ ComputePipeline::ComputePipeline(const Device& device_, Scheduler& scheduler, vk
             .basePipelineIndex = 0,
         };
         try {
-            pipeline = device.GetLogical().CreateComputePipeline(compute_ci, device.IsHuawei() ? VkPipelineCache{VK_NULL_HANDLE} : *pipeline_cache);
+            pipeline = device.GetLogical().CreateComputePipeline(compute_ci, *pipeline_cache);
         } catch (const vk::Exception& exception) {
             LOG_CRITICAL(Render_Vulkan, "Adreno rejected compute shader {:016X}: {}", shader_hash,
                          exception.what());
