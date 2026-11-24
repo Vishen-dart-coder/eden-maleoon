@@ -791,6 +791,17 @@ void HostMemory::Protect(size_t virtual_offset, size_t length, MemoryPermission 
 }
 
 void HostMemory::ClearBackingRegion(size_t physical_offset, size_t length, u32 fill_value) {
+#if defined(__linux__) || defined(__ANDROID__)
+    // Zeroing with memset commits every page of a freshly allocated guest heap, even the parts
+    // the game never touches. Punching a hole in the backing file gives zero pages back without
+    // using any memory until they are written.
+    constexpr size_t page_mask = 0xFFF;
+    if (fill_value == 0 && length >= 0x100000 && (physical_offset & page_mask) == 0 &&
+        (length & page_mask) == 0 &&
+        madvise(backing_base + physical_offset, length, MADV_REMOVE) == 0) {
+        return;
+    }
+#endif
     std::memset(backing_base + physical_offset, fill_value, length);
 }
 
