@@ -89,6 +89,18 @@ public:
         stencil_reset = true;
     }
 
+    /// Re-emits every non-EDS dynamic state on the next draw.
+    void InvalidateDynamicStates() {
+        for (const auto flag : {Dirty::Viewports, Dirty::Scissors, Dirty::DepthBias,
+                                Dirty::BlendConstants, Dirty::DepthBounds,
+                                Dirty::StencilProperties, Dirty::StencilReference,
+                                Dirty::StencilWriteMask, Dirty::StencilCompare,
+                                Dirty::LineWidth}) {
+            (*flags)[flag] = true;
+        }
+        stencil_reset = true;
+    }
+
     void InvalidateViewports() {
         (*flags)[Dirty::Viewports] = true;
     }

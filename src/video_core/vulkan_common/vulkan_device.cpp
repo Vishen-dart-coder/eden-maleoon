@@ -520,6 +520,8 @@ Device::Device(VkInstance instance_, vk::PhysicalDevice physical_, VkSurfaceKHR 
     CollectToolingInfo();
 
     if (IsHuawei()) {
+        // Scaled vertex formats are unreliable on Mali-derived drivers; convert in the shader.
+        must_emulate_scaled_formats = true;
         // Plain std140 vec4 arrays for constant buffers: Huawei's compiler is very slow on several
         // scalar-strided views aliased on one binding.
         has_broken_descriptor_aliasing = true;
