@@ -405,14 +405,24 @@ void EmulationSession::HaltEmulation() {
     m_cv.notify_one();
 }
 
+namespace {
+bool DiskShaderCacheEnabled() {
+    if (!Settings::values.use_disk_shader_cache.GetValue()) {
+        LOG_WARNING(Frontend, "Disk shader cache was disabled in settings, using it anyway");
+    }
+    return true;
+}
+} // Anonymous namespace
+
 void EmulationSession::RunEmulation() {
     {
         std::scoped_lock lock(m_mutex);
         m_is_running = true;
     }
 
-    // Load the disk shader cache.
-    if (Settings::values.use_disk_shader_cache.GetValue()) {
+    // Load the disk shader cache. Always on in this build: without it nothing compiled is kept
+    // between launches, and every scene has to be compiled again.
+    if (DiskShaderCacheEnabled()) {
         LoadDiskCacheProgress(VideoCore::LoadCallbackStage::Prepare, 0, 0);
         m_system.Renderer().ReadRasterizer()->LoadDiskResources(
             m_system.GetApplicationProcessProgramID(), std::stop_token{}, LoadDiskCacheProgress);
@@ -458,7 +468,7 @@ void EmulationSession::RequestDiskShaderCacheReload(u64 program_id) {
 }
 
 void EmulationSession::ReloadDiskShaderCache(u64 program_id) {
-    if (!Settings::values.use_disk_shader_cache.GetValue())
+    if (!DiskShaderCacheEnabled())
         return;
 
     LOG_INFO(Frontend, "Reloading disk shader cache for {:016X}", program_id);
