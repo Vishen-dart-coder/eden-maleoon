@@ -399,6 +399,8 @@ GraphicsPipeline::GraphicsPipeline(
         }
     }
 
+    // Chosen before the build is queued: the build may release the shader modules.
+    configure_func = ConfigureFunc(spv_modules, stage_infos);
     auto func{[this, shader_notify, &render_pass_cache, pipeline_statistics] {
         const VkRenderPass render_pass{render_pass_cache.Get(MakeRenderPassKey(key.state, device))};
         Validate();
@@ -430,7 +432,6 @@ GraphicsPipeline::GraphicsPipeline(
     } else {
         func();
     }
-    configure_func = ConfigureFunc(spv_modules, stage_infos);
 }
 
 void GraphicsPipeline::AddTransition(GraphicsPipeline* transition) {
@@ -1251,6 +1252,10 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
             color_blend_ci.attachmentCount
         );
         GPU::Logging::GPULogger::GetInstance().LogPipelineStateChange(pipeline_info);
+    }
+    if (device.IsHuawei()) {
+        // The pipeline owns its compiled code now; thousands of retained modules cost memory.
+        spv_modules = {};
     }
 }
 

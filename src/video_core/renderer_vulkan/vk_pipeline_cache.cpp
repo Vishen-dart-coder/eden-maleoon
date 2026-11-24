@@ -55,7 +55,7 @@
 
 namespace Vulkan {
 namespace {
-// True once the system has less than ~900 MB available; latched so preloading stops for good.
+// True once the system has less than ~1.7 GB available; latched so preloading stops for good.
 bool PreloadMemoryIsLow() {
     static std::atomic<bool> low{false};
     static std::atomic<u32> calls{0};
@@ -70,7 +70,7 @@ bool PreloadMemoryIsLow() {
     while (std::getline(meminfo, line)) {
         if (line.starts_with("MemAvailable:")) {
             const u64 kb = std::strtoull(line.c_str() + 13, nullptr, 10);
-            if (kb != 0 && kb < 900'000) {
+            if (kb != 0 && kb < 1'700'000) {
                 low.store(true, std::memory_order_relaxed);
                 LOG_WARNING(Render_Vulkan, "Only {} MB of memory available, stopping shader preload",
                             kb / 1024);
