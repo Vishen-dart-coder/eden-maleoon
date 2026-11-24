@@ -230,7 +230,7 @@ private:
 
     std::condition_variable build_condvar;
     std::mutex build_mutex;
-    std::chrono::milliseconds wait_budget{300};
+    std::chrono::milliseconds wait_budget{2500};
     std::atomic_bool is_built{false};
     bool uses_push_descriptor{false};
     bool uses_descriptor_buffer{false};
