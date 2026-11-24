@@ -4,6 +4,8 @@
 // SPDX-FileCopyrightText: Copyright 2019 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <atomic>
+#include <array>
 #include <iterator>
 
 #include "common/assert.h"
@@ -324,12 +326,52 @@ FormatInfo SurfaceFormat(const Device& device, FormatType format_type, bool with
         const VkFormatFeatureFlags sample_only =
             no_storage & ~(VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
                            VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+        static std::array<std::atomic<bool>, 256> logged{};
+        const auto log_once = [&](const char* what, VkFormat chosen) {
+            const size_t index = static_cast<size_t>(tuple.format) & 0xFF;
+            if (!logged[index].exchange(true)) {
+                LOG_WARNING(Render_Vulkan, "Huawei format fallback: format {} -> {} ({})",
+                            static_cast<u32>(tuple.format), static_cast<u32>(chosen), what);
+            }
+        };
         if (device.IsFormatSupported(tuple.format, no_storage, format_type)) {
+            log_once("no storage", tuple.format);
             return {tuple.format, attachable, false};
         }
+        if (attachable) {
+            // Games render motion vectors and normals into 16-bit signed targets. When the
+            // driver can't render to those, a float target of the same texel size holds the
+            // same values; a target that can't be rendered to at all leaves garbage behind.
+            VkFormat float_format = VK_FORMAT_UNDEFINED;
+            switch (tuple.format) {
+            case VK_FORMAT_R16_SNORM:
+                float_format = VK_FORMAT_R16_SFLOAT;
+                break;
+            case VK_FORMAT_R16G16_SNORM:
+                float_format = VK_FORMAT_R16G16_SFLOAT;
+                break;
+            case VK_FORMAT_R16G16B16A16_SNORM:
+                float_format = VK_FORMAT_R16G16B16A16_SFLOAT;
+                break;
+            default:
+                break;
+            }
+            if (float_format != VK_FORMAT_UNDEFINED) {
+                if (device.IsFormatSupported(float_format, usage, format_type)) {
+                    log_once("float target", float_format);
+                    return {float_format, attachable, storage};
+                }
+                if (device.IsFormatSupported(float_format, no_storage, format_type)) {
+                    log_once("float target, no storage", float_format);
+                    return {float_format, attachable, false};
+                }
+            }
+        }
         if (device.IsFormatSupported(tuple.format, sample_only, format_type)) {
+            log_once("sample only", tuple.format);
             return {tuple.format, false, false};
         }
+        log_once("unsupported, used as is", supported);
     }
     return {supported, attachable, storage};
 }
