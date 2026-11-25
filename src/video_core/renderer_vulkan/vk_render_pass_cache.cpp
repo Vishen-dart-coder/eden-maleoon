@@ -6,8 +6,12 @@
 
 #include "common/container/unordered_map.h"
 
+#include <array>
+#include <atomic>
+
 #include <boost/container/static_vector.hpp>
 
+#include "common/logging.h"
 #include "video_core/renderer_vulkan/maxwell_to_vk.h"
 #include "video_core/renderer_vulkan/vk_render_pass_cache.h"
 #include "video_core/surface.h"
@@ -152,6 +156,16 @@ VkRenderPass RenderPassCache::Get(const RenderPassKey& key) {
             .attachment = is_valid ? num_colors : VK_ATTACHMENT_UNUSED,
             .layout = VK_IMAGE_LAYOUT_GENERAL,
         };
+        if (is_valid && device->IsHuawei()) {
+            // Record what each game renders into, and whether this GPU can render into it
+            const auto host{MaxwellToVK::SurfaceFormat(*device, FormatType::Optimal, true, format)};
+            static std::array<std::atomic<bool>, 256> logged{};
+            if (!logged[static_cast<size_t>(format) & 0xFF].exchange(true)) {
+                LOG_INFO(Render_Vulkan, "Render target format: guest {} -> host {}, {}",
+                         static_cast<u32>(format), static_cast<u32>(host.format),
+                         host.attachable ? "renderable" : "NOT RENDERABLE on this GPU");
+            }
+        }
         if (is_valid) {
             const VkAttachmentLoadOp load_op = (key.color_clear_mask & (1u << index)) != 0
                                                    ? VK_ATTACHMENT_LOAD_OP_CLEAR

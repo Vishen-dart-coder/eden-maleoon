@@ -412,6 +412,13 @@ void PresentManager::CopyToSwapchain(Frame* frame) {
             // Draw to swapchain.
             return CopyToSwapchainImpl(frame);
         } catch (const vk::Exception& except) {
+#ifdef __ANDROID__
+            if (requires_recreation && except.GetResult() == VK_ERROR_INITIALIZATION_FAILED) {
+                // The window is gone (app in the background); drop this frame instead of aborting
+                LOG_WARNING(Render_Vulkan, "No surface to present to, dropping the frame");
+                return;
+            }
+#endif
             if (except.GetResult() != VK_ERROR_SURFACE_LOST_KHR) {
                 throw;
             }
