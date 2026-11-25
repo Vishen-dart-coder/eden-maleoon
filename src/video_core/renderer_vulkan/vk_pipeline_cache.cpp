@@ -544,6 +544,9 @@ PipelineCache::PipelineCache(Tegra::MaxwellDeviceMemoryManager& device_memory_,
         // Restrict shaders to a conservative baseline.
         LOG_WARNING(Render_Vulkan, "Huawei Maleoon: using conservative shader profile");
         profile.supported_spirv = (std::min)(profile.supported_spirv, 0x00010300u);
+        // The compiler dereferences a null pointer when a geometry shader reads gl_Position from
+        // a bare built-in array; it expects the gl_PerVertex block form.
+        profile.has_broken_spirv_position_input = true;
         profile.support_int8 = false;
         profile.support_uniform_and_storage_buffer_8bit = false;
         profile.support_storage_buffer_8bit = false;
@@ -709,7 +712,7 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     if (device.IsHuawei()) {
         HuaweiSlowPipelines::SetPath(base_dir / "huawei_slow_pipelines.txt");
         HuaweiUsedPipelines::SetPath(base_dir / "huawei_used_pipelines.txt");
-        HuaweiGeometry::SetPath(base_dir / "huawei_geometry.txt");
+        HuaweiGeometry::SetPath(base_dir / "huawei_geometry_v2.txt");
     }
 
     if (use_vulkan_pipeline_cache) {
