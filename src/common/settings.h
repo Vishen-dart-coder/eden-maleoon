@@ -407,7 +407,12 @@ struct Values {
 
     // Graphics Settings
     ResolutionScalingInfo resolution_info{};
-    SwitchableSetting<ResolutionSetup> resolution_setup{linkage, ResolutionSetup::Res1X,
+    SwitchableSetting<ResolutionSetup> resolution_setup{linkage,
+#ifdef __ANDROID__
+                                                        ResolutionSetup::Res3_4X,
+#else
+                                                        ResolutionSetup::Res1X,
+#endif
                                                         "resolution_setup", Category::Renderer};
 
     SwitchableSetting<VSyncMode, true> vsync_mode{linkage,
@@ -419,7 +424,11 @@ struct Values {
                                                   true};
 
     SwitchableSetting<ScalingFilter> scaling_filter{linkage,
+#ifdef __ANDROID__
+                                                    ScalingFilter::Bilinear,
+#else
                                                     ScalingFilter::NearestNeighbor,
+#endif
                                                     "scaling_filter",
                                                     Category::Renderer,
                                                     Specialization::Default,

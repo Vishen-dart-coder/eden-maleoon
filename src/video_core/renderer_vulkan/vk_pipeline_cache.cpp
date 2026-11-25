@@ -708,6 +708,8 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     pipeline_cache_filename = base_dir / "vulkan.bin";
     if (device.IsHuawei()) {
         HuaweiSlowPipelines::SetPath(base_dir / "huawei_slow_pipelines.txt");
+        HuaweiUsedPipelines::SetPath(base_dir / "huawei_used_pipelines.txt");
+        HuaweiGeometry::SetPath(base_dir / "huawei_geometry.txt");
     }
 
     if (use_vulkan_pipeline_cache) {
@@ -747,18 +749,28 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     }};
     size_t huawei_skipped_preloads = 0;
     size_t huawei_queued_preloads = 0;
+    size_t huawei_filler_preloads = 0;
+    const size_t huawei_history_size = device.IsHuawei() ? HuaweiUsedPipelines::HistorySize() : 0;
     const auto load_graphics{[&](std::ifstream& file, std::vector<FileEnvironment> envs) {
         GraphicsPipelineCacheKey key;
         file.read(reinterpret_cast<char*>(&key), sizeof(key));
 
         // Pipelines known to take minutes are left to build when drawn.
-        // Only the first pipelines are preloaded: queueing and building thousands of them costs
-        // over a gigabyte on this tablet. The rest are built when they are drawn.
-        constexpr size_t MAX_HUAWEI_PRELOADS = 1500;
-        if (device.IsHuawei() && (HuaweiSlowPipelines::Contains(key.Hash()) ||
-                                  huawei_queued_preloads >= MAX_HUAWEI_PRELOADS)) {
-            ++huawei_skipped_preloads;
-            return;
+        // Queueing and building thousands of pipelines costs over a gigabyte on this tablet, so
+        // only the ones drawn in recent sessions are preloaded. Without that history, or with
+        // room to spare, the oldest pipelines in the cache fill the remaining slots.
+        if (device.IsHuawei()) {
+            const u64 hash = key.Hash();
+            const bool recent = HuaweiUsedPipelines::WasUsedRecently(hash);
+            const bool room = huawei_filler_preloads + huawei_history_size <
+                              HuaweiUsedPipelines::MAX_PRELOADS;
+            if (HuaweiSlowPipelines::Contains(hash) || (!recent && !room)) {
+                ++huawei_skipped_preloads;
+                return;
+            }
+            if (!recent) {
+                ++huawei_filler_preloads;
+            }
         }
         ++huawei_queued_preloads;
         if ((key.state.extended_dynamic_state != 0) !=
@@ -823,8 +835,11 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         if (use_vulkan_pipeline_cache) {
             vulkan_pipeline_cache.Read(&driver_cache_size, nullptr);
         }
-        LOG_INFO(Render_Vulkan, "Huawei: {} pipelines left to load on demand, driver cache {} MB",
-                 huawei_skipped_preloads, driver_cache_size >> 20);
+        LOG_INFO(Render_Vulkan,
+                 "Huawei: {} pipelines preloaded ({} drawn recently), {} left to load on demand, "
+                 "driver cache {} MB",
+                 huawei_queued_preloads, huawei_history_size, huawei_skipped_preloads,
+                 driver_cache_size >> 20);
     }
 
     std::unique_lock lock{state.mutex};
@@ -885,6 +900,9 @@ GraphicsPipeline* PipelineCache::CurrentGraphicsPipelineSlowPath() {
     }
     if (!pipeline) {
         return nullptr;
+    }
+    if (device.IsHuawei() && pipeline->MarkUsedOnce()) {
+        HuaweiUsedPipelines::MarkUsed(graphics_key.Hash());
     }
     if (current_pipeline) {
         current_pipeline->AddTransition(pipeline.get());

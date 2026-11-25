@@ -7,6 +7,7 @@
 #pragma once
 
 #include <filesystem>
+#include <utility>
 
 #include <algorithm>
 #include <array>
@@ -40,6 +41,25 @@ namespace HuaweiSlowPipelines {
 void SetPath(const std::filesystem::path& path);
 bool Contains(u64 hash);
 } // namespace HuaweiSlowPipelines
+
+/// Pipelines the game actually drew in recent sessions; these are the ones worth preloading.
+namespace HuaweiUsedPipelines {
+inline constexpr size_t MAX_PRELOADS = 1500;
+void SetPath(const std::filesystem::path& path);
+/// Number of pipelines remembered from earlier sessions (at most MAX_PRELOADS)
+size_t HistorySize();
+bool WasUsedRecently(u64 hash);
+void MarkUsed(u64 hash);
+} // namespace HuaweiUsedPipelines
+
+/// Huawei's compiler used to crash on geometry stages. Each game tries them once; if the driver
+/// crashes or hangs, they are skipped from then on.
+namespace HuaweiGeometry {
+void SetPath(const std::filesystem::path& path);
+bool Allowed();
+void BeginCompile();
+void EndCompile(bool success);
+} // namespace HuaweiGeometry
 
 
 struct GraphicsPipelineCacheKey {
@@ -141,6 +161,11 @@ public:
 
     /// Waits briefly for an in-flight build so fast pipelines draw on their first frame instead
     /// of being skipped. Each pipeline gets a small total budget; GPU thread only.
+    /// True the first time it is called for this pipeline
+    [[nodiscard]] bool MarkUsedOnce() noexcept {
+        return !std::exchange(marked_used, true);
+    }
+
     [[nodiscard]] bool WaitBuiltWithinBudget() {
         if (IsBuilt()) {
             return true;
@@ -230,7 +255,8 @@ private:
 
     std::condition_variable build_condvar;
     std::mutex build_mutex;
-    std::chrono::milliseconds wait_budget{2500};
+    std::chrono::milliseconds wait_budget{600};
+    bool marked_used{};
     std::atomic_bool is_built{false};
     bool uses_push_descriptor{false};
     bool uses_descriptor_buffer{false};

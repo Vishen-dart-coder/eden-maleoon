@@ -1118,6 +1118,13 @@ jdoubleArray Java_org_yuzu_yuzu_1emu_NativeLibrary_getPerfStats(JNIEnv* env, jcl
         double stats[4] = {results.system_fps, results.average_game_fps, results.frametime,
                            results.emulation_speed};
 
+        static u32 perf_log_ticks = 0;
+        if (++perf_log_ticks % 8 == 0) {
+            LOG_INFO(Frontend, "Performance: {:.1f} fps, {:.1f} ms per frame, {:.0f}% speed",
+                     results.average_game_fps, results.frametime * 1000.0,
+                     results.emulation_speed * 100.0);
+        }
+
         env->SetDoubleArrayRegion(j_stats, 0, 4, stats);
     }
 

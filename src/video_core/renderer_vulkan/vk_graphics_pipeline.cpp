@@ -117,6 +117,133 @@ bool Contains(u64 hash) {
 }
 } // namespace HuaweiSlowPipelines
 
+namespace HuaweiUsedPipelines {
+namespace {
+std::mutex g_used_mutex;
+std::filesystem::path g_used_path;
+std::unordered_set<u64> g_recent_set;
+std::unordered_set<u64> g_session_set;
+std::ofstream g_used_file;
+} // Anonymous namespace
+
+void SetPath(const std::filesystem::path& path) {
+    std::scoped_lock lock{g_used_mutex};
+    g_used_file.close();
+    g_used_path = path;
+    g_recent_set.clear();
+    g_session_set.clear();
+
+    std::vector<u64> history;
+    {
+        std::ifstream file(path);
+        std::string line;
+        while (std::getline(file, line)) {
+            if (!line.empty()) {
+                history.push_back(std::strtoull(line.c_str(), nullptr, 16));
+            }
+        }
+    }
+    // The newest entries are at the end of the file
+    std::vector<u64> kept;
+    for (auto it = history.rbegin(); it != history.rend(); ++it) {
+        if (g_recent_set.size() >= MAX_PRELOADS) {
+            break;
+        }
+        if (g_recent_set.insert(*it).second) {
+            kept.push_back(*it);
+        }
+    }
+    // Keep the file from growing without bound
+    if (history.size() > kept.size()) {
+        std::ofstream out(path, std::ios::trunc);
+        for (auto it = kept.rbegin(); it != kept.rend(); ++it) {
+            out << std::format("{:016x}\n", *it);
+        }
+    }
+    g_used_file.open(path, std::ios::app);
+}
+
+size_t HistorySize() {
+    std::scoped_lock lock{g_used_mutex};
+    return g_recent_set.size();
+}
+
+bool WasUsedRecently(u64 hash) {
+    std::scoped_lock lock{g_used_mutex};
+    return g_recent_set.contains(hash);
+}
+
+void MarkUsed(u64 hash) {
+    std::scoped_lock lock{g_used_mutex};
+    if (!g_session_set.insert(hash).second || !g_used_file.is_open()) {
+        return;
+    }
+    g_used_file << std::format("{:016x}\n", hash);
+    g_used_file.flush();
+}
+} // namespace HuaweiUsedPipelines
+
+namespace HuaweiGeometry {
+namespace {
+std::mutex g_geometry_mutex;
+std::filesystem::path g_geometry_path;
+bool g_geometry_bad = false;
+u32 g_geometry_in_flight = 0;
+
+void WriteState(const char* state) {
+    if (g_geometry_path.empty()) {
+        return;
+    }
+    std::ofstream out(g_geometry_path, std::ios::trunc);
+    out << state << std::endl;
+}
+} // Anonymous namespace
+
+void SetPath(const std::filesystem::path& path) {
+    std::scoped_lock lock{g_geometry_mutex};
+    g_geometry_path = path;
+    g_geometry_in_flight = 0;
+    std::string state;
+    {
+        std::ifstream file(path);
+        std::getline(file, state);
+    }
+    // "trying" left behind means the last attempt never returned from the driver
+    g_geometry_bad = state == "bad" || state == "trying";
+    if (state == "trying") {
+        WriteState("bad");
+    }
+    LOG_INFO(Render_Vulkan, "Huawei geometry shaders: {}",
+             g_geometry_bad ? "disabled, the driver failed on them before"
+                            : state == "ok" ? "enabled, worked before" : "untested, trying them");
+}
+
+bool Allowed() {
+    std::scoped_lock lock{g_geometry_mutex};
+    return !g_geometry_bad;
+}
+
+void BeginCompile() {
+    std::scoped_lock lock{g_geometry_mutex};
+    if (g_geometry_in_flight++ == 0) {
+        WriteState("trying");
+    }
+}
+
+void EndCompile(bool success) {
+    std::scoped_lock lock{g_geometry_mutex};
+    if (g_geometry_in_flight > 0) {
+        --g_geometry_in_flight;
+    }
+    if (!success) {
+        g_geometry_bad = true;
+        WriteState("bad");
+    } else if (g_geometry_in_flight == 0 && !g_geometry_bad) {
+        WriteState("ok");
+    }
+}
+} // namespace HuaweiGeometry
+
 namespace {
 using boost::container::small_vector;
 using boost::container::static_vector;
@@ -1187,15 +1314,20 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
                 .pSpecializationInfo = nullptr,
             });
     }
+    bool huawei_geometry_trial = false;
     if (device.IsHuawei()) {
-        // Huawei's shader compiler crashes on geometry-stage pipelines and leaves the driver
-        // locked afterwards. Skip them before they reach the driver.
+        // Huawei's shader compiler has crashed on geometry-stage pipelines and left the driver
+        // locked afterwards. They are tried once per game and skipped for good if that fails.
         for (const auto& stage_ci : shader_stages) {
-            if (stage_ci.stage == VK_SHADER_STAGE_GEOMETRY_BIT) {
+            if (stage_ci.stage != VK_SHADER_STAGE_GEOMETRY_BIT) {
+                continue;
+            }
+            if (!HuaweiGeometry::Allowed()) {
                 LOG_WARNING(Render_Vulkan, "Huawei Maleoon: skipping {} geometry pipeline {:016x}",
                             key.unique_hashes[4] != 0 ? "guest" : "emulated", key.Hash());
                 throw vk::Exception(VK_ERROR_FEATURE_NOT_PRESENT);
             }
+            huawei_geometry_trial = true;
         }
     }
     VkPipelineCreateFlags flags{};
@@ -1211,7 +1343,7 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
     }
     const auto compile_start = std::chrono::steady_clock::now();
     const InFlightCompile in_flight{device.IsHuawei() ? key.Hash() : 0};
-    pipeline = device.GetLogical().CreateGraphicsPipeline({
+    const VkGraphicsPipelineCreateInfo pipeline_ci{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
         .flags = flags,
@@ -1231,7 +1363,22 @@ void GraphicsPipeline::MakePipeline(VkRenderPass render_pass) {
         .subpass = 0,
         .basePipelineHandle = nullptr,
         .basePipelineIndex = 0,
-    }, *pipeline_cache);
+    };
+    if (huawei_geometry_trial) {
+        HuaweiGeometry::BeginCompile();
+        try {
+            pipeline = device.GetLogical().CreateGraphicsPipeline(pipeline_ci, *pipeline_cache);
+        } catch (const vk::Exception&) {
+            HuaweiGeometry::EndCompile(false);
+            LOG_ERROR(Render_Vulkan, "Huawei Maleoon: geometry pipeline {:016x} failed, "
+                      "geometry shaders are now disabled for this game", key.Hash());
+            throw;
+        }
+        HuaweiGeometry::EndCompile(true);
+        LOG_INFO(Render_Vulkan, "Huawei Maleoon: geometry pipeline {:016x} built", key.Hash());
+    } else {
+        pipeline = device.GetLogical().CreateGraphicsPipeline(pipeline_ci, *pipeline_cache);
+    }
     if (device.IsHuawei()) {
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::steady_clock::now() - compile_start)
