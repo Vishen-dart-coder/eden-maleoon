@@ -55,10 +55,12 @@
 
 namespace Vulkan {
 namespace {
-// True once the system has less than ~1.7 GB available; latched so preloading stops for good.
+// True once preloading has used its memory budget (~450 MB) or the system has less than ~1.7 GB
+// available; latched so preloading stops for good. The rest are built when they are drawn.
 bool PreloadMemoryIsLow() {
     static std::atomic<bool> low{false};
     static std::atomic<u32> calls{0};
+    static std::atomic<u64> baseline_kb{0};
     if (low.load(std::memory_order_relaxed)) {
         return true;
     }
@@ -70,10 +72,17 @@ bool PreloadMemoryIsLow() {
     while (std::getline(meminfo, line)) {
         if (line.starts_with("MemAvailable:")) {
             const u64 kb = std::strtoull(line.c_str() + 13, nullptr, 10);
-            if (kb != 0 && kb < 1'700'000) {
+            if (kb == 0) {
+                break;
+            }
+            u64 expected = 0;
+            baseline_kb.compare_exchange_strong(expected, kb);
+            const u64 baseline = baseline_kb.load(std::memory_order_relaxed);
+            if (kb < 1'700'000 || (baseline > kb && baseline - kb > 450'000)) {
                 low.store(true, std::memory_order_relaxed);
-                LOG_WARNING(Render_Vulkan, "Only {} MB of memory available, stopping shader preload",
-                            kb / 1024);
+                LOG_WARNING(Render_Vulkan,
+                            "Shader preload stopped after {} pipelines: {} MB available, {} MB at start",
+                            calls.load(std::memory_order_relaxed), kb / 1024, baseline / 1024);
                 return true;
             }
             break;
