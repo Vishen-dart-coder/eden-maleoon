@@ -619,6 +619,8 @@ Result IApplicationManagerInterface::ListApplicationRecord(
         out_records[i++] = records[idx];
     }
 
+    LOG_INFO(Service_NS, "Home Menu asked for the game list: {} provider entries, {} games, {} returned",
+             installed_games.size(), records.size(), i);
     *out_count = static_cast<s32>(i);
     R_SUCCEED();
 }
