@@ -1624,6 +1624,12 @@ void EmitContext::DefineOutputs(const IR::Program& program) {
     if (runtime_info.convert_depth_mode || info.stores.AnyComponent(IR::Attribute::PositionX) ||
         stage == Stage::VertexB) {
         output_position = DefineOutput(*this, F32[4], invocations, spv::BuiltIn::Position);
+        if (profile.has_broken_no_contraction && stage == Stage::VertexB) {
+            // NoContraction can't be used on this compiler, so passes that draw the same
+            // geometry may round positions differently and fight over depth. Invariant makes
+            // the position math match between shaders.
+            Decorate(output_position, spv::Decoration::Invariant);
+        }
     }
     if (info.stores[IR::Attribute::PointSize] || runtime_info.fixed_state_point_size) {
         if (stage == Stage::Fragment) {
