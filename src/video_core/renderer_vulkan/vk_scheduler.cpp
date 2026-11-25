@@ -238,11 +238,6 @@ bool Scheduler::UpdateGraphicsPipeline(GraphicsPipeline* pipeline) {
     if (!pipeline) {
         return true;
     }
-    if (device.IsHuawei()) {
-        // Mali-derived drivers can keep dynamic state from the previous pipeline (Arm erratum
-        // 3809538); set it again after every pipeline switch.
-        state_tracker.InvalidateDynamicStates();
-    }
 
     if (!pipeline->UsesExtendedDynamicState()) {
         state.needs_state_enable_refresh = true;
