@@ -1676,6 +1676,11 @@ void Device::CollectPhysicalMemoryInfo() {
         const s64 available_memory = static_cast<s64>(device_access_memory - device_initial_usage);
         const u64 memory_size = Settings::values.vram_usage_mode.GetValue() == Settings::VramUsageMode::Aggressive ? 6_GiB : 4_GiB;
         device_access_memory = static_cast<u64>(std::max<s64>(std::min<s64>(available_memory - 8_GiB, memory_size), std::min<s64>(local_memory, memory_size)));
+        if (IsHuawei()) {
+            // GPU memory is ordinary RAM here and the tablet has little to spare: a 4 GiB
+            // budget lets textures grow until the system kills the app.
+            device_access_memory = std::min<u64>(device_access_memory, 1536_MiB);
+        }
     } else {
         const u64 reserve_memory = std::min<u64>(device_access_memory / 8, 1_GiB);
         device_access_memory -= reserve_memory;

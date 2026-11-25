@@ -33,6 +33,10 @@ BufferCache<P>::BufferCache(Tegra::MaxwellDeviceMemoryManager& device_memory_, R
     if (!runtime.CanReportMemoryUsage()) {
         minimum_memory = DEFAULT_EXPECTED_MEMORY;
         critical_memory = DEFAULT_CRITICAL_MEMORY;
+        if (runtime.GetDeviceLocalMemory() <= 2_GiB) {
+            minimum_memory = 384_MiB;
+            critical_memory = 640_MiB;
+        }
         return;
     }
 
@@ -48,6 +52,11 @@ BufferCache<P>::BufferCache(Tegra::MaxwellDeviceMemoryManager& device_memory_, R
     critical_memory = static_cast<u64>(
         (std::max)((std::min)(device_local_memory - min_vacancy_critical, min_spacing_critical),
                  DEFAULT_CRITICAL_MEMORY));
+    if (device_local_memory <= static_cast<s64>(2_GiB)) {
+        // Small shared-memory devices: start freeing unused buffers much earlier.
+        minimum_memory = 384_MiB;
+        critical_memory = 640_MiB;
+    }
 }
 
 template <class P>
