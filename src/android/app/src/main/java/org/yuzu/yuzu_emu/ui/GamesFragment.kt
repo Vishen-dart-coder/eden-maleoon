@@ -494,6 +494,13 @@ class GamesFragment : Fragment() {
                 return
             }
 
+            // Make sure every game in the list is registered, so the Home Menu can show them.
+            runCatching {
+                org.yuzu.yuzu_emu.utils.GameHelper.cachedGameList.toList().forEach {
+                    NativeLibrary.addFileToFilesystemProvider(it.path)
+                }
+            }
+
             NativeLibrary.setCurrentAppletId(AppletInfo.QLaunch.appletId)
 
             val qlaunchGame = Game(
