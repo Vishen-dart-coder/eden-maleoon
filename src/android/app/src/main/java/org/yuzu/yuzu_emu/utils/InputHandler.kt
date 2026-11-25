@@ -138,7 +138,7 @@ object InputHandler {
                         gameControllerDeviceIds[controllerNumber] = YuzuPhysicalDevice(
                             this,
                             port,
-                            inputSettings[port].useSystemVibrator
+                            false // rumble always goes to the controller, never the tablet
                         )
                     }
                     port++
@@ -155,7 +155,7 @@ object InputHandler {
         }
 
         // Register the input overlay on a dedicated port for all player 1 vibrations
-        NativeInput.registerController(YuzuInputOverlayDevice(androidControllers.isEmpty(), 100))
+        NativeInput.registerController(YuzuInputOverlayDevice(false, 100))
         registeredControllers.clear()
         NativeInput.getInputDevices().forEach {
             registeredControllers.add(ParamPackage(it))

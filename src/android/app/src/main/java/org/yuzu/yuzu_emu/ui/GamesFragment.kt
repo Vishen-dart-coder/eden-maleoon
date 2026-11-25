@@ -275,12 +275,20 @@ class GamesFragment : Fragment() {
         }
     }
 
-    private fun submitGameList(games: List<Game>) {
+    private fun submitGameList(gameList: List<Game>) {
         val adapter = (binding.gridGames as? RecyclerView)?.adapter as? GameAdapter
         if (adapter == null) {
             schedulePostReloadListSettle()
             return
         }
+
+        // Show the Home Menu as the first entry of the list when firmware is installed
+        val qlaunchEntry = if (binding.searchText.text.isNullOrBlank()) {
+            QLaunchEntry.create(getString(R.string.qlaunch_applet))
+        } else {
+            null
+        }
+        val games = if (qlaunchEntry != null) listOf(qlaunchEntry) + gameList else gameList
 
         val submitGeneration = ++gameListSubmitGeneration
         adapter.submitList(games) {
@@ -592,4 +600,26 @@ class GamesFragment : Fragment() {
 
             windowInsets
         }
+}
+
+/** The Home Menu shown as an entry of the games list. */
+object QLaunchEntry {
+    private var path: String = ""
+
+    fun create(title: String): Game? {
+        val appletPath = runCatching {
+            if (NativeLibrary.isFirmwareAvailable()) {
+                NativeLibrary.getAppletLaunchPath(AppletInfo.QLaunch.entryId)
+            } else {
+                ""
+            }
+        }.getOrDefault("")
+        if (appletPath.isEmpty()) {
+            return null
+        }
+        path = appletPath
+        return Game(title = title, path = appletPath, developer = "Nintendo")
+    }
+
+    fun isEntry(game: Game): Boolean = path.isNotEmpty() && game.path == path
 }

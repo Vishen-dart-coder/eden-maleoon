@@ -227,6 +227,19 @@ class GameAdapter(private val activity: AppCompatActivity) :
         }
 
         fun onClick(game: Game) {
+            if (org.yuzu.yuzu_emu.ui.QLaunchEntry.isEntry(game)) {
+                // The Home Menu entry: register every listed game so it can show them, then boot it
+                runCatching {
+                    org.yuzu.yuzu_emu.utils.GameHelper.cachedGameList.toList().forEach {
+                        NativeLibrary.addFileToFilesystemProvider(it.path)
+                    }
+                }
+                NativeLibrary.setCurrentAppletId(org.yuzu.yuzu_emu.model.AppletInfo.QLaunch.appletId)
+                val action = HomeNavigationDirections.actionGlobalEmulationActivity(game)
+                binding.root.findNavController().navigate(action)
+                return
+            }
+
             val gameExists = DocumentFile.fromSingleUri(
                 YuzuApplication.appContext,
                 game.path.toUri()
@@ -292,6 +305,9 @@ class GameAdapter(private val activity: AppCompatActivity) :
         }
 
         fun onLongClick(game: Game): Boolean {
+            if (org.yuzu.yuzu_emu.ui.QLaunchEntry.isEntry(game)) {
+                return true
+            }
             val action = HomeNavigationDirections.actionGlobalPerGamePropertiesFragment(game)
             binding.root.findNavController().navigate(action)
             return true
