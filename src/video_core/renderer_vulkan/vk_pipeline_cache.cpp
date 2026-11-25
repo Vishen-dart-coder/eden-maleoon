@@ -746,15 +746,21 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         ++state.total;
     }};
     size_t huawei_skipped_preloads = 0;
+    size_t huawei_queued_preloads = 0;
     const auto load_graphics{[&](std::ifstream& file, std::vector<FileEnvironment> envs) {
         GraphicsPipelineCacheKey key;
         file.read(reinterpret_cast<char*>(&key), sizeof(key));
 
         // Pipelines known to take minutes are left to build when drawn.
-        if (device.IsHuawei() && HuaweiSlowPipelines::Contains(key.Hash())) {
+        // Only the first pipelines are preloaded: queueing and building thousands of them costs
+        // over a gigabyte on this tablet. The rest are built when they are drawn.
+        constexpr size_t MAX_HUAWEI_PRELOADS = 1500;
+        if (device.IsHuawei() && (HuaweiSlowPipelines::Contains(key.Hash()) ||
+                                  huawei_queued_preloads >= MAX_HUAWEI_PRELOADS)) {
             ++huawei_skipped_preloads;
             return;
         }
+        ++huawei_queued_preloads;
         if ((key.state.extended_dynamic_state != 0) !=
                 dynamic_features.has_extended_dynamic_state ||
             (key.state.extended_dynamic_state_2 != 0) !=
