@@ -655,9 +655,9 @@ void EmulationSession::RunEmulation() {
         if (++memory_log_ticks % 6 == 0) {
             LogMemoryStatus();
             LogThreadUsage();
-            // Roughly every 30 seconds, with the region list once after about four minutes
+            // Roughly every 30 seconds, with the region list after about one and two and a half minutes
             if (memory_log_ticks % 36 == 0) {
-                LogMemoryBreakdown(memory_log_ticks == 36 * 8);
+                LogMemoryBreakdown(memory_log_ticks == 36 * 2 || memory_log_ticks == 36 * 5);
             }
         }
         std::optional<u64> reload_title;
