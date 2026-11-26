@@ -74,8 +74,8 @@ TextureCache<P>::TextureCache(Runtime& runtime_, Tegra::MaxwellDeviceMemoryManag
         minimum_memory = static_cast<u64>((device_local_memory - mem_threshold) / 2);
         if (device_local_memory <= static_cast<s64>(2_GiB)) {
             // Small shared-memory devices: start freeing unused textures much earlier.
-            expected_memory = 768_MiB;
-            critical_memory = 1152_MiB;
+            expected_memory = 640_MiB;
+            critical_memory = 960_MiB;
             minimum_memory = 0;
         }
     } else {

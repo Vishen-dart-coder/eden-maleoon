@@ -44,7 +44,7 @@ bool Contains(u64 hash);
 
 /// Pipelines the game actually drew in recent sessions; these are the ones worth preloading.
 namespace HuaweiUsedPipelines {
-inline constexpr size_t MAX_PRELOADS = 1500;
+inline constexpr size_t MAX_PRELOADS = 1100;
 void SetPath(const std::filesystem::path& path);
 /// Number of pipelines remembered from earlier sessions (at most MAX_PRELOADS)
 size_t HistorySize();
