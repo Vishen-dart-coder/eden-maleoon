@@ -76,7 +76,9 @@ TextureCache<P>::TextureCache(Runtime& runtime_, Tegra::MaxwellDeviceMemoryManag
             // Small shared-memory devices: start freeing unused textures much earlier.
             expected_memory = 768_MiB;
             critical_memory = 1152_MiB;
-            minimum_memory = 0;
+            // Below this nothing is collected. With 0, every texture left unused for 50 frames
+            // was dropped even when memory was plentiful, e.g. in the Home Menu.
+            minimum_memory = 384_MiB;
         }
     } else {
         expected_memory = DEFAULT_EXPECTED_MEMORY + 512_MiB;
