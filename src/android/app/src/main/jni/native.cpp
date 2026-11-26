@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <cctype>
 #include <codecvt>
 #include <csignal>
 #include <cstdlib>
@@ -566,6 +567,55 @@ void LogThreadUsage() {
     LOG_INFO(Frontend, "Threads: {} | pages read back from storage: {}", summary, new_faults);
 }
 
+// What Eden's memory is made of: the emulated console's RAM shows up as shared memory, the
+// emulator and GPU driver as private memory. Once, a few minutes in, the largest regions are
+// listed by name.
+void LogMemoryBreakdown(bool list_regions) {
+    {
+        std::ifstream rollup("/proc/self/smaps_rollup");
+        std::string line, summary;
+        while (std::getline(rollup, line)) {
+            for (const char* key : {"Rss:", "Pss_Anon:", "Pss_File:", "Pss_Shmem:", "Swap:"}) {
+                if (line.starts_with(key)) {
+                    const u64 kb = std::strtoull(line.c_str() + std::strlen(key), nullptr, 10);
+                    summary += std::format("{} {} MB  ", key, kb >> 10);
+                }
+            }
+        }
+        LOG_INFO(Frontend, "Memory breakdown: {}", summary);
+    }
+    if (!list_regions) {
+        return;
+    }
+    std::ifstream smaps("/proc/self/smaps");
+    std::map<std::string, u64> rss_by_name;
+    std::string line, name;
+    while (std::getline(smaps, line)) {
+        if (line.starts_with("Rss:")) {
+            rss_by_name[name] += std::strtoull(line.c_str() + 4, nullptr, 10);
+        } else if (!line.empty() && (std::isdigit(static_cast<unsigned char>(line[0])) ||
+                                     (line[0] >= 'a' && line[0] <= 'f')) &&
+                   line.find('-') != std::string::npos && line.find(':') > line.find(' ')) {
+            // Header line: "start-end perms offset dev inode  name"
+            std::istringstream header(line);
+            std::string range, perms, offset, dev, inode;
+            header >> range >> perms >> offset >> dev >> inode;
+            std::getline(header, name);
+            const auto first = name.find_first_not_of(' ');
+            name = first == std::string::npos ? "[anonymous]" : name.substr(first);
+        }
+    }
+    std::vector<std::pair<u64, std::string>> regions;
+    for (const auto& [region, kb] : rss_by_name) {
+        regions.emplace_back(kb, region);
+    }
+    std::sort(regions.rbegin(), regions.rend());
+    for (size_t index = 0; index < regions.size() && index < 14; ++index) {
+        LOG_INFO(Frontend, "Memory region: {} MB  {}", regions[index].first >> 10,
+                 regions[index].second);
+    }
+}
+
 bool DiskShaderCacheEnabled() {
     if (!Settings::values.use_disk_shader_cache.GetValue()) {
         LOG_WARNING(Frontend, "Disk shader cache was disabled in settings, using it anyway");
@@ -605,6 +655,10 @@ void EmulationSession::RunEmulation() {
         if (++memory_log_ticks % 6 == 0) {
             LogMemoryStatus();
             LogThreadUsage();
+            // Roughly every 30 seconds, with the region list once after about four minutes
+            if (memory_log_ticks % 36 == 0) {
+                LogMemoryBreakdown(memory_log_ticks == 36 * 8);
+            }
         }
         std::optional<u64> reload_title;
         {
