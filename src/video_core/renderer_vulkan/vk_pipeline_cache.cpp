@@ -753,6 +753,11 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
     size_t huawei_skipped_preloads = 0;
     size_t huawei_queued_preloads = 0;
     size_t huawei_filler_preloads = 0;
+    size_t huawei_duplicate_entries = 0;
+    {
+        std::scoped_lock lock{huawei_cached_mutex};
+        huawei_cached_hashes.clear();
+    }
     const size_t huawei_history_size = device.IsHuawei() ? HuaweiUsedPipelines::HistorySize() : 0;
     const auto load_graphics{[&](std::ifstream& file, std::vector<FileEnvironment> envs) {
         GraphicsPipelineCacheKey key;
@@ -764,6 +769,15 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         // room to spare, the oldest pipelines in the cache fill the remaining slots.
         if (device.IsHuawei()) {
             const u64 hash = key.Hash();
+            // Pipelines that were skipped at load used to be written to the cache again every
+            // time they were drawn, so the file holds many copies; build each one only once.
+            {
+                std::scoped_lock lock{huawei_cached_mutex};
+                if (!huawei_cached_hashes.insert(hash).second) {
+                    ++huawei_duplicate_entries;
+                    return;
+                }
+            }
             const bool recent = HuaweiUsedPipelines::WasUsedRecently(hash);
             const bool room = huawei_filler_preloads + huawei_history_size <
                               HuaweiUsedPipelines::MAX_PRELOADS;
@@ -840,8 +854,9 @@ void PipelineCache::LoadDiskResources(u64 title_id, std::stop_token stop_loading
         }
         LOG_INFO(Render_Vulkan,
                  "Huawei: {} pipelines preloaded ({} drawn recently), {} left to load on demand, "
-                 "driver cache {} MB",
+                 "{} duplicate cache entries ignored, driver cache {} MB",
                  huawei_queued_preloads, huawei_history_size, huawei_skipped_preloads,
+                 huawei_duplicate_entries,
                  driver_cache_size >> 20);
     }
 
@@ -1103,6 +1118,13 @@ std::unique_ptr<GraphicsPipeline> PipelineCache::CreateGraphicsPipeline() {
         CreateGraphicsPipeline(main_pools, graphics_key, environments.Span(), nullptr, true)};
     if (!pipeline || pipeline_cache_filename.empty()) {
         return pipeline;
+    }
+    if (device.IsHuawei()) {
+        // Already in the cache file, it was only left out of the preload
+        std::scoped_lock lock{huawei_cached_mutex};
+        if (!huawei_cached_hashes.insert(graphics_key.Hash()).second) {
+            return pipeline;
+        }
     }
     serialization_thread.QueueWork([this, key = graphics_key, envs = std::move(environments.envs)] {
         boost::container::static_vector<const GenericEnvironment*, Maxwell::MaxShaderProgram>

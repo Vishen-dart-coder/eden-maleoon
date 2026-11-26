@@ -12,7 +12,9 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <type_traits>
+#include <unordered_set>
 #include "common/container/unordered_map.h"
 #include <vector>
 
@@ -172,6 +174,10 @@ private:
     Shader::HostTranslateInfo host_info;
 
     std::filesystem::path pipeline_cache_filename;
+
+    /// Hashes of the graphics pipelines already stored in the cache file (Huawei only)
+    std::mutex huawei_cached_mutex;
+    std::unordered_set<u64> huawei_cached_hashes;
 
     std::filesystem::path vulkan_pipeline_cache_filename;
     vk::PipelineCache vulkan_pipeline_cache;
