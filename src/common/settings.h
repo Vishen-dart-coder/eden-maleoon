@@ -409,7 +409,7 @@ struct Values {
     ResolutionScalingInfo resolution_info{};
     SwitchableSetting<ResolutionSetup> resolution_setup{linkage,
 #ifdef __ANDROID__
-                                                        ResolutionSetup::Res3_4X,
+                                                        ResolutionSetup::Res1_2X,
 #else
                                                         ResolutionSetup::Res1X,
 #endif

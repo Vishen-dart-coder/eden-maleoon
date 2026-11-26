@@ -319,10 +319,10 @@ void TranslateResolutionInfo(ResolutionSetup setup, ResolutionScalingInfo& info)
         break;
     case ResolutionSetup::Res1X:
 #ifdef __ANDROID__
-        // This build targets one tablet whose GPU holds Mario Kart to about 30 fps at 1x, so the
-        // 1x choice renders at 0.75x as well.
-        info.up_scale = 3;
-        info.down_shift = 2;
+        // This build targets one tablet whose GPU is pixel-limited: Mario Kart races ran at about
+        // 28 fps at 1x and 40 fps at 0.75x. The 1x choice is used as an in-between 0.625x step.
+        info.up_scale = 5;
+        info.down_shift = 3;
         info.downscale = true;
 #else
         info.up_scale = 1;
