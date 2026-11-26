@@ -7,6 +7,9 @@
 #define VMA_IMPLEMENTATION
 #include "video_core/vulkan_common/vma.h"
 
+#include <algorithm>
+#include <chrono>
+#include <filesystem>
 #include <codecvt>
 #include <csignal>
 #include <cstdlib>
@@ -476,6 +479,93 @@ void LogMemoryStatus() {
     LOG_INFO(Frontend, "Memory: available{} | Eden uses{}", available, rss);
 }
 
+// Which threads are busy, which core each last ran on, and how often memory had to be read back
+// from storage. Shows whether a slow game is limited by the emulated CPU, the GPU thread or
+// memory pressure.
+void LogThreadUsage() {
+    struct Sample {
+        u64 ticks{};
+        std::string name;
+        int core{};
+    };
+    static std::map<int, u64> previous_ticks;
+    static u64 previous_major_faults = 0;
+    static auto previous_time = std::chrono::steady_clock::now();
+
+    const auto parse = [](const std::string& path, Sample& sample, u64* major_faults) {
+        std::ifstream file(path);
+        std::string text;
+        if (!std::getline(file, text)) {
+            return false;
+        }
+        const auto open = text.find('(');
+        const auto close = text.rfind(')');
+        if (open == std::string::npos || close == std::string::npos || close < open) {
+            return false;
+        }
+        sample.name = text.substr(open + 1, close - open - 1);
+        std::istringstream rest(text.substr(close + 1));
+        std::string field;
+        u64 user = 0, system = 0;
+        // Fields after the name start at number 3 (state)
+        for (int index = 3; rest >> field; ++index) {
+            if (index == 12 && major_faults) {
+                *major_faults = std::strtoull(field.c_str(), nullptr, 10);
+            } else if (index == 14) {
+                user = std::strtoull(field.c_str(), nullptr, 10);
+            } else if (index == 15) {
+                system = std::strtoull(field.c_str(), nullptr, 10);
+            } else if (index == 39) {
+                sample.core = std::atoi(field.c_str());
+                break;
+            }
+        }
+        sample.ticks = user + system;
+        return true;
+    };
+
+    const auto now = std::chrono::steady_clock::now();
+    const double seconds = std::chrono::duration<double>(now - previous_time).count();
+    previous_time = now;
+    const double ticks_per_second = static_cast<double>(sysconf(_SC_CLK_TCK));
+
+    std::vector<std::pair<double, std::string>> busy;
+    std::map<int, u64> current_ticks;
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator("/proc/self/task", ec)) {
+        const int tid = std::atoi(entry.path().filename().c_str());
+        Sample sample;
+        if (tid == 0 || !parse(entry.path().string() + "/stat", sample, nullptr)) {
+            continue;
+        }
+        current_ticks[tid] = sample.ticks;
+        const auto it = previous_ticks.find(tid);
+        if (it == previous_ticks.end() || seconds <= 0.0) {
+            continue;
+        }
+        const double percent =
+            static_cast<double>(sample.ticks - it->second) / ticks_per_second / seconds * 100.0;
+        if (percent >= 5.0) {
+            busy.emplace_back(percent, std::format("{} {:.0f}% core{}", sample.name, percent,
+                                                   sample.core));
+        }
+    }
+    previous_ticks = std::move(current_ticks);
+
+    Sample process;
+    u64 major_faults = 0;
+    parse("/proc/self/stat", process, &major_faults);
+    const u64 new_faults = major_faults - previous_major_faults;
+    previous_major_faults = major_faults;
+
+    std::sort(busy.begin(), busy.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    std::string summary;
+    for (size_t index = 0; index < busy.size() && index < 10; ++index) {
+        summary += (index ? ", " : "") + busy[index].second;
+    }
+    LOG_INFO(Frontend, "Threads: {} | pages read back from storage: {}", summary, new_faults);
+}
+
 bool DiskShaderCacheEnabled() {
     if (!Settings::values.use_disk_shader_cache.GetValue()) {
         LOG_WARNING(Frontend, "Disk shader cache was disabled in settings, using it anyway");
@@ -514,6 +604,7 @@ void EmulationSession::RunEmulation() {
     while (true) {
         if (++memory_log_ticks % 6 == 0) {
             LogMemoryStatus();
+            LogThreadUsage();
         }
         std::optional<u64> reload_title;
         {
