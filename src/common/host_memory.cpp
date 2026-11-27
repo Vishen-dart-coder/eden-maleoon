@@ -594,6 +594,11 @@ public:
         // Intersect the range with our address space.
         AdjustMap(&virtual_offset, &length);
 
+        // Guard against zero-length mappings which always return EINVAL.
+        if (length == 0) [[unlikely]] {
+            return;
+        }
+
         // We are removing a placeholder.
         free_manager.AllocateBlock(virtual_base + virtual_offset, length);
 
@@ -608,6 +613,15 @@ public:
             prot_flags |= PROT_EXEC;
 #endif
         int flags = (fd >= 0 ? MAP_SHARED : MAP_PRIVATE) | MAP_FIXED;
+#ifdef __ANDROID__
+        // HarmonyOS (and some Android kernels) do not allow MAP_FIXED to atomically
+        // replace a MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE placeholder with a
+        // MAP_SHARED file-backed mapping, returning EINVAL. Explicitly remove the
+        // placeholder first so the subsequent mmap maps into unmapped space.
+        if (fd >= 0) {
+            munmap(virtual_base + virtual_offset, length);
+        }
+#endif
         void* ret = mmap(virtual_base + virtual_offset, length, prot_flags, flags, fd, host_offset);
         ASSERT_MSG(ret != MAP_FAILED, "mmap: {} {}", strerror(errno), fd);
     }
