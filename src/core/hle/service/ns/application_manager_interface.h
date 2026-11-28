@@ -35,6 +35,7 @@ public:
     Result GetGameCardMountFailureEvent(OutCopyHandle<Kernel::KReadableEvent> out_event);
     Result GetGameCardWakenReadyEvent(OutCopyHandle<Kernel::KReadableEvent> out_event);
     Result IsGameCardApplicationRunning(Out<bool> out_is_running);
+    Result Unknown935(Out<u64> out_result);
     Result Unknown936(Out<u64> out_result);
     Result IsAnyApplicationEntityInstalled(Out<bool> out_is_any_application_entity_installed);
     Result GetApplicationViewDeprecated(

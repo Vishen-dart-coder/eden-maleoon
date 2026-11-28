@@ -138,7 +138,7 @@ std::string SaveDataFactory::GetFullPath(ProgramId program_id, VirtualDir dir,
     case SaveDataType::Cache:
         return std::format("{}save/cache/{:016X}", out, title_id);
     default:
-        ASSERT_MSG(false, "Unrecognized SaveDataType: {:02X}", static_cast<u8>(type));
+        LOG_WARNING(Service_FS, "Unrecognized SaveDataType: {:02X}", static_cast<u8>(type));
         return std::format("{}save/unknown_{:X}/{:016X}", out, static_cast<u8>(type), title_id);
     }
 }
